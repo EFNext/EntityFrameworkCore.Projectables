@@ -1,0 +1,16 @@
+﻿
+namespace Foo {
+    class OtherObj { public string Prop1 { get; set; } }
+    class MyObj {
+        public MyObj()
+        {
+        }
+
+        public string Prop1 { get; set; }
+        [Projectable]
+        public MyObj(OtherObj obj)
+        {
+            Prop1 = obj.Prop1;
+        }
+    }
+}

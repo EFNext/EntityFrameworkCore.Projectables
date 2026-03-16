@@ -15,7 +15,7 @@ namespace EntityFrameworkCore.Projectables.CodeFixes.Tests;
 /// </summary>
 public abstract class CodeFixTestBase
 {
-    private static Document CreateDocument(string source)
+    protected static Document CreateDocument(string source)
     {
         var workspace = new AdhocWorkspace();
         var projectId = ProjectId.CreateNewId();

@@ -184,6 +184,12 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
         {
             throw new InvalidOperationException("Expected a memberName here");
         }
+        
+        // Report EFP0012 when a [Projectable] method is a factory that could be a constructor.
+        if (member is MethodDeclarationSyntax factoryCandidate)
+        {
+            ReportFactoryMethodDiagnosticIfApplicable(factoryCandidate, context);
+        }
 
         var generatedClassName = ProjectionExpressionClassNameGenerator.GenerateName(projectable.ClassNamespace, projectable.NestedInClassNames, projectable.MemberName, projectable.ParameterTypeNames);
         var generatedFileName = projectable.ClassTypeParameterList is not null ? $"{generatedClassName}-{projectable.ClassTypeParameterList.ChildNodes().Count()}.g.cs" : $"{generatedClassName}.g.cs";
@@ -283,6 +289,63 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
             return lambdaTypeArguments;
         }
     }
+
+    /// <summary>
+    /// Reports <c>EFP0012</c> when <paramref name="method"/> is a <c>[Projectable]</c> factory
+    /// method whose expression body is a pure object-initializer expression targeting the
+    /// containing class (e.g. <c>public static MyObj Create(…) => new MyObj { … }</c>).
+    /// </summary>
+    private static void ReportFactoryMethodDiagnosticIfApplicable(
+        MethodDeclarationSyntax method,
+        SourceProductionContext context)
+    {
+        if (method.Parent is not TypeDeclarationSyntax containingType)
+        {
+            return;
+        }
+
+        if (method.ExpressionBody is null)
+        {
+            return;
+        }
+
+        if (method.ExpressionBody.Expression is not ObjectCreationExpressionSyntax creation)
+        {
+            return;
+        }
+
+        // Only pure object-initializer bodies — no constructor arguments on the new expression.
+        if (creation.ArgumentList?.Arguments.Count > 0)
+        {
+            return;
+        }
+
+        if (creation.Initializer is null)
+        {
+            return;
+        }
+
+        // The return type's simple name must equal the containing class name.
+        var containingTypeName = containingType.Identifier.Text;
+        if (GetFactorySimpleTypeName(method.ReturnType) != containingTypeName
+            || GetFactorySimpleTypeName(creation.Type) != containingTypeName)
+        {
+            return;
+        }
+
+        context.ReportDiagnostic(Diagnostic.Create(
+            Infrastructure.Diagnostics.FactoryMethodShouldBeConstructor,
+            method.Identifier.GetLocation(),
+            method.Identifier.Text));
+    }
+
+    private static string? GetFactorySimpleTypeName(TypeSyntax type) =>
+        type switch
+        {
+            IdentifierNameSyntax id => id.Identifier.Text,
+            QualifiedNameSyntax qn => qn.Right.Identifier.Text,
+            _ => null
+        };
 
     /// <summary>
     /// Extracts a <see cref="ProjectionRegistryEntry"/> from a member declaration.
