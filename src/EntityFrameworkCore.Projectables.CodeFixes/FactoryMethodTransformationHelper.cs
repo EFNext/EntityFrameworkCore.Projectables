@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.Formatting;
+using Microsoft.CodeAnalysis.Simplification;
 
 namespace EntityFrameworkCore.Projectables.CodeFixes;
 
@@ -38,6 +39,13 @@ static internal class FactoryMethodTransformationHelper
         }
 
         if (method.Parent is not TypeDeclarationSyntax typeDecl)
+        {
+            return false;
+        }
+
+        // Only support static factory methods; instance factories would drop the receiver
+        // when transformed to a constructor call, which can change semantics.
+        if (!method.Modifiers.Any(SyntaxKind.StaticKeyword))
         {
             return false;
         }
@@ -127,24 +135,22 @@ static internal class FactoryMethodTransformationHelper
         }
 
         var solution = document.Project.Solution;
-        var returnTypeName = containingType.Identifier.Text;
+        var returnType = methodSymbol.ReturnType;
+        var returnTypeSyntax = SyntaxFactory
+            .ParseTypeName(returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+            .WithAdditionalAnnotations(Simplifier.Annotation);
 
         // Find all callers BEFORE modifying the solution so that spans are still valid.
         var references = await SymbolFinder
             .FindReferencesAsync(methodSymbol, solution, cancellationToken)
             .ConfigureAwait(false);
 
-        // Group locations by document, excluding the declaring document (handled separately below).
+        // Group locations by document (including the declaring document).
         var locationsByDoc = new Dictionary<DocumentId, List<ReferenceLocation>>();
         foreach (var referencedSymbol in references)
         {
             foreach (var refLocation in referencedSymbol.Locations)
             {
-                if (refLocation.Document.Id == document.Id)
-                {
-                    continue;
-                }
-
                 if (!locationsByDoc.TryGetValue(refLocation.Document.Id, out var list))
                 {
                     list = [];
@@ -198,12 +204,19 @@ static internal class FactoryMethodTransformationHelper
                     continue;
                 }
 
+                // Skip conditional-access invocations like x?.FactoryMethod(...)
+                // to avoid producing invalid syntax such as x?.new ReturnType(...).
+                if (invocation.Parent is ConditionalAccessExpressionSyntax)
+                {
+                    continue;
+                }
+
                 // Rewrite:  instance.FactoryMethod(args)  →  new ReturnType(args)
                 var newCreation = SyntaxFactory
                     .ObjectCreationExpression(
                         SyntaxFactory.Token(SyntaxKind.NewKeyword)
                             .WithTrailingTrivia(SyntaxFactory.Space),
-                        SyntaxFactory.IdentifierName(returnTypeName),
+                        returnTypeSyntax,
                         invocation.ArgumentList,
                         initializer: null)
                     .WithLeadingTrivia(invocation.GetLeadingTrivia())
@@ -231,18 +244,26 @@ static internal class FactoryMethodTransformationHelper
         var creation = (ObjectCreationExpressionSyntax)method.ExpressionBody!.Expression;
         var initializer = creation.Initializer!;
 
+        // Only support simple object-initializer assignments (Prop = value). If there are
+        // other initializer forms (e.g., collection initializers), bail out to avoid
+        // producing a constructor that does not preserve behavior.
+        if (initializer.Expressions.Any(e => e is not AssignmentExpressionSyntax))
+        {
+            return root;
+        }
+
         // Convert each object-initializer assignment (Prop = value) to a statement (Prop = value;).
         var statements = initializer.Expressions
             .OfType<AssignmentExpressionSyntax>()
             .Select(a => (StatementSyntax)SyntaxFactory.ExpressionStatement(a))
             .ToArray();
 
+        var ctorModifiers = GetConstructorModifiers(method);
+
         var ctor = SyntaxFactory
             .ConstructorDeclaration(containingType.Identifier.WithoutTrivia())
             .WithAttributeLists(method.AttributeLists)
-            .WithModifiers(SyntaxFactory.TokenList(
-                SyntaxFactory.Token(SyntaxKind.PublicKeyword)
-                    .WithTrailingTrivia(SyntaxFactory.Space)))
+            .WithModifiers(ctorModifiers)
             .WithParameterList(method.ParameterList)
             .WithBody(SyntaxFactory.Block(statements))
             .WithAdditionalAnnotations(Formatter.Annotation)
@@ -262,9 +283,7 @@ static internal class FactoryMethodTransformationHelper
         {
             var paramlessCtor = SyntaxFactory
                 .ConstructorDeclaration(containingType.Identifier.WithoutTrivia())
-                .WithModifiers(SyntaxFactory.TokenList(
-                    SyntaxFactory.Token(SyntaxKind.PublicKeyword)
-                        .WithTrailingTrivia(SyntaxFactory.Space)))
+                .WithModifiers(ctorModifiers)
                 .WithParameterList(SyntaxFactory.ParameterList())
                 .WithBody(SyntaxFactory.Block())
                 .WithAdditionalAnnotations(Formatter.Annotation)
@@ -274,6 +293,20 @@ static internal class FactoryMethodTransformationHelper
         }
 
         return root.ReplaceNode(containingType, containingType.WithMembers(newMembers));
+    }
+
+    private static SyntaxTokenList GetConstructorModifiers(MethodDeclarationSyntax method)
+    {
+        // Derive constructor modifiers from the factory method, dropping modifiers that are
+        // invalid or meaningless for instance constructors (e.g., static, async, extern, unsafe).
+        var filteredModifiers = method.Modifiers
+            .Where(m =>
+                m.Kind() != SyntaxKind.StaticKeyword &&
+                m.Kind() != SyntaxKind.AsyncKeyword &&
+                m.Kind() != SyntaxKind.ExternKeyword &&
+                m.Kind() != SyntaxKind.UnsafeKeyword);
+
+        return SyntaxFactory.TokenList(filteredModifiers);
     }
 }
 
