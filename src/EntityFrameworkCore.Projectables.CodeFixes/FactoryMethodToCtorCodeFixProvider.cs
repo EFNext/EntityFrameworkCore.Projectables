@@ -3,7 +3,6 @@ using System.Composition;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace EntityFrameworkCore.Projectables.CodeFixes;
 
@@ -35,15 +34,9 @@ public sealed class FactoryMethodToCtorCodeFixProvider : CodeFixProvider
             return;
         }
 
-        var diagnostic = context.Diagnostics[0];
-        var node = root.FindNode(diagnostic.Location.SourceSpan);
-        var method = node.AncestorsAndSelf().OfType<MethodDeclarationSyntax>().FirstOrDefault();
-        if (method is null)
-        {
-            return;
-        }
+        var node = root.FindNode(context.Span);
 
-        if (!FactoryMethodTransformationHelper.TryGetFactoryMethodPattern(method, out var containingType, out _))
+        if (!ProjectableCodeFixHelper.TryGetFixableFactoryMethodPattern(node, out var containingType, out var method))
         {
             return;
         }
@@ -53,18 +46,18 @@ public sealed class FactoryMethodToCtorCodeFixProvider : CodeFixProvider
                 title: "Convert [Projectable] factory method to constructor",
                 createChangedDocument: ct =>
                     FactoryMethodTransformationHelper.ConvertToConstructorAsync(
-                        context.Document, method, containingType!, ct),
+                        context.Document, method!, containingType!, ct),
                 equivalenceKey: "EFP0012_FactoryToConstructor"),
-            diagnostic);
+            context.Diagnostics[0]);
 
         context.RegisterCodeFix(
             CodeAction.Create(
                 title: "Convert [Projectable] factory method to constructor (and update callers)",
                 createChangedSolution: ct =>
                     FactoryMethodTransformationHelper.ConvertToConstructorAndUpdateCallersAsync(
-                        context.Document, method, containingType!, ct),
+                        context.Document, method!, containingType!, ct),
                 equivalenceKey: "EFP0012_FactoryToConstructorWithCallers"),
-            diagnostic);
+            context.Diagnostics[0]);
     }
 }
 

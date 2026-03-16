@@ -21,6 +21,30 @@ static internal class ProjectableCodeFixHelper
 
         return attribute is not null;
     }
+    
+    static internal bool TryGetFixableFactoryMethodPattern(
+        SyntaxNode methodNode,
+        out TypeDeclarationSyntax? containingType,
+        out MethodDeclarationSyntax? method)
+    {
+        containingType = null;
+        method = null;
+        
+        var localMethod = methodNode.AncestorsAndSelf().OfType<MethodDeclarationSyntax>().FirstOrDefault();
+        if (localMethod is null)
+        {
+            return false;
+        }
+
+        if (!SyntaxHelpers.TryGetFactoryMethodPattern(localMethod, out containingType))
+        {
+            return false;
+        }
+
+        method = localMethod;
+
+        return TryFindProjectableAttribute(localMethod, out _);
+    }
 
     /// <summary>
     /// Adds or replaces a named argument on the [Projectable] attribute of <paramref name="member"/>.

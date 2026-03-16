@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Text;
+using EntityFrameworkCore.Projectables.CodeFixes;
 using EntityFrameworkCore.Projectables.Generator.Comparers;
 using EntityFrameworkCore.Projectables.Generator.Interpretation;
 using EntityFrameworkCore.Projectables.Generator.Models;
@@ -186,9 +187,12 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
         }
         
         // Report EFP0012 when a [Projectable] method is a factory that could be a constructor.
-        if (member is MethodDeclarationSyntax factoryCandidate)
+        if (member is MethodDeclarationSyntax factoryCandidate && SyntaxHelpers.TryGetFactoryMethodPattern(factoryCandidate, out _))
         {
-            ReportFactoryMethodDiagnosticIfApplicable(factoryCandidate, context);
+            context.ReportDiagnostic(Diagnostic.Create(
+                Infrastructure.Diagnostics.FactoryMethodShouldBeConstructor,
+                factoryCandidate.Identifier.GetLocation(),
+                factoryCandidate.Identifier.Text));
         }
 
         var generatedClassName = ProjectionExpressionClassNameGenerator.GenerateName(projectable.ClassNamespace, projectable.NestedInClassNames, projectable.MemberName, projectable.ParameterTypeNames);
@@ -288,70 +292,6 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
 
             return lambdaTypeArguments;
         }
-    }
-
-    /// <summary>
-    /// Reports <c>EFP0012</c> when <paramref name="method"/> is a <c>[Projectable]</c> factory
-    /// method whose expression body is a pure object-initializer expression targeting the
-    /// containing class (e.g. <c>public static MyObj Create(…) => new MyObj { … }</c>).
-    /// </summary>
-    private static void ReportFactoryMethodDiagnosticIfApplicable(
-        MethodDeclarationSyntax method,
-        SourceProductionContext context)
-    {
-        if (method.Parent is not TypeDeclarationSyntax)
-        {
-            return;
-        }
-
-        if (method.ExpressionBody is null)
-        {
-            return;
-        }
-
-        if (method.ExpressionBody.Expression is not ObjectCreationExpressionSyntax creation)
-        {
-            return;
-        }
-
-        // Only pure object-initializer bodies — no constructor arguments on the new expression.
-        if (creation.ArgumentList?.Arguments.Count > 0)
-        {
-            return;
-        }
-
-        if (creation.Initializer is null)
-        {
-            return;
-        }
-
-        if (memberSymbol is not IMethodSymbol methodSymbol)
-        {
-            return;
-        }
-
-        var containingTypeSymbol = methodSymbol.ContainingType;
-        if (containingTypeSymbol is null)
-        {
-            return;
-        }
-
-        var createdTypeSymbol = semanticModel.GetTypeInfo(creation).Type;
-        if (createdTypeSymbol is null)
-        {
-            return;
-        }
-
-        if (!SymbolEqualityComparer.Default.Equals(methodSymbol.ReturnType, containingTypeSymbol)
-            || !SymbolEqualityComparer.Default.Equals(createdTypeSymbol, containingTypeSymbol))
-        {
-            return;
-        }
-
-        context.ReportDiagnostic(Diagnostic.Create(
-            Infrastructure.Diagnostics.FactoryMethodShouldBeConstructor,
-            method.Identifier.GetLocation(),
-            method.Identifier.Text));
     }
 
     /// <summary>

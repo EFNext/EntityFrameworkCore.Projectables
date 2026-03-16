@@ -2,7 +2,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeRefactorings;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace EntityFrameworkCore.Projectables.CodeFixes;
 
@@ -42,14 +41,8 @@ public sealed class FactoryMethodToConstructorCodeRefactoringProvider : CodeRefa
         }
 
         var node = root.FindNode(context.Span);
-        var method = node.AncestorsAndSelf().OfType<MethodDeclarationSyntax>().FirstOrDefault();
-        if (method is null)
-        {
-            return;
-        }
 
-        if (!FactoryMethodTransformationHelper.TryGetFactoryMethodPattern(
-                method, out var containingType, out _))
+        if (!ProjectableCodeFixHelper.TryGetFixableFactoryMethodPattern(node, out var containingType, out var method))
         {
             return;
         }
@@ -59,7 +52,7 @@ public sealed class FactoryMethodToConstructorCodeRefactoringProvider : CodeRefa
                 title: "Convert [Projectable] factory method to constructor",
                 createChangedDocument: ct =>
                     FactoryMethodTransformationHelper.ConvertToConstructorAsync(
-                        context.Document, method, containingType!, ct),
+                        context.Document, method!, containingType!, ct),
                 equivalenceKey: "EFP_FactoryToConstructor"));
 
         context.RegisterRefactoring(
@@ -67,7 +60,7 @@ public sealed class FactoryMethodToConstructorCodeRefactoringProvider : CodeRefa
                 title: "Convert [Projectable] factory method to constructor (and update callers)",
                 createChangedSolution: ct =>
                     FactoryMethodTransformationHelper.ConvertToConstructorAndUpdateCallersAsync(
-                        context.Document, method, containingType!, ct),
+                        context.Document, method!, containingType!, ct),
                 equivalenceKey: "EFP_FactoryToConstructorWithCallers"));
     }
 }

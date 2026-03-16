@@ -15,113 +15,6 @@ namespace EntityFrameworkCore.Projectables.CodeFixes;
 static internal class FactoryMethodTransformationHelper
 {
     /// <summary>
-    /// Returns <see langword="true"/> when <paramref name="method"/> matches the
-    /// factory-method pattern:
-    /// <list type="bullet">
-    ///   <item><description>Decorated with <c>[Projectable]</c>.</description></item>
-    ///   <item><description>Expression body of the form <c>=> new ContainingType { … }</c>
-    ///       (object initializer only, no constructor arguments in the <c>new</c>
-    ///       expression).</description></item>
-    ///   <item><description>Return type simple name equals the containing class name.</description></item>
-    /// </list>
-    /// </summary>
-    static internal bool TryGetFactoryMethodPattern(
-        MethodDeclarationSyntax method,
-        out TypeDeclarationSyntax? containingType,
-        out ObjectCreationExpressionSyntax? creation)
-    {
-        containingType = null;
-        creation = null;
-
-        if (!ProjectableCodeFixHelper.TryFindProjectableAttribute(method, out _))
-        {
-            return false;
-        }
-
-        if (method.Parent is not TypeDeclarationSyntax typeDecl)
-        {
-            return false;
-        }
-
-        // Only support static factory methods; instance factories would drop the receiver
-        // when transformed to a constructor call, which can change semantics.
-        if (!method.Modifiers.Any(SyntaxKind.StaticKeyword))
-        {
-            return false;
-        }
-
-        if (method.ExpressionBody is null)
-        {
-            return false;
-        }
-
-        if (method.ExpressionBody.Expression is not ObjectCreationExpressionSyntax creationExpr)
-        {
-            if (method.ExpressionBody.Expression is not ImplicitObjectCreationExpressionSyntax implicitCreation)
-            {
-                return false;
-            }
-
-            if (implicitCreation.ArgumentList?.Arguments.Count > 0)
-            {
-                return false;
-            }
-
-            if (implicitCreation.Initializer is null)
-            {
-                return false;
-            }
-
-            var containingTypeName = typeDecl.Identifier.Text;
-            if (GetSimpleTypeName(method.ReturnType) != containingTypeName)
-            {
-                return false;
-            }
-
-            var typeSyntax = SyntaxFactory.IdentifierName(containingTypeName);
-            var objectCreation = SyntaxFactory.ObjectCreationExpression(
-                typeSyntax,
-                implicitCreation.ArgumentList ?? SyntaxFactory.ArgumentList(),
-                implicitCreation.Initializer);
-
-            containingType = typeDecl;
-            creation = objectCreation;
-            return true;
-        }
-
-        // Require a pure object-initializer body (no constructor arguments on the new expression).
-        if (creationExpr.ArgumentList?.Arguments.Count > 0)
-        {
-            return false;
-        }
-
-        if (creationExpr.Initializer is null)
-        {
-            return false;
-        }
-
-        // The return type's simple name must match the containing class name.
-        var containingTypeName = typeDecl.Identifier.Text;
-        if (GetSimpleTypeName(method.ReturnType) != containingTypeName
-            || GetSimpleTypeName(creationExpr.Type) != containingTypeName)
-        {
-            return false;
-        }
-
-        containingType = typeDecl;
-        creation = creationExpr;
-        return true;
-    }
-
-    private static string? GetSimpleTypeName(TypeSyntax type) =>
-        type switch
-        {
-            IdentifierNameSyntax id => id.Identifier.Text,
-            QualifiedNameSyntax qn => qn.Right.Identifier.Text,
-            _ => null
-        };
-
-    /// <summary>
     /// Fetches a fresh root, applies the factory → constructor transformation, and
     /// returns an updated document.
     /// </summary>
@@ -330,10 +223,10 @@ static internal class FactoryMethodTransformationHelper
         // invalid or meaningless for instance constructors (e.g., static, async, extern, unsafe).
         var filteredModifiers = method.Modifiers
             .Where(m =>
-                m.Kind() != SyntaxKind.StaticKeyword &&
-                m.Kind() != SyntaxKind.AsyncKeyword &&
-                m.Kind() != SyntaxKind.ExternKeyword &&
-                m.Kind() != SyntaxKind.UnsafeKeyword);
+                !m.IsKind(SyntaxKind.StaticKeyword) &&
+                !m.IsKind(SyntaxKind.AsyncKeyword) &&
+                !m.IsKind(SyntaxKind.ExternKeyword) &&
+                !m.IsKind(SyntaxKind.UnsafeKeyword));
 
         return SyntaxFactory.TokenList(filteredModifiers);
     }

@@ -98,6 +98,5 @@ static internal class Diagnostics
         messageFormat: "Factory method '{0}' creates and returns an instance of the containing class via object initializer. Consider converting it to a [Projectable] constructor.",
         category: "Design",
         DiagnosticSeverity.Info,
-        isEnabledByDefault: true,
-        helpLinkUri: "https://github.com/koenbeuk/EntityFrameworkCore.Projectables");
+        isEnabledByDefault: true);
 }
