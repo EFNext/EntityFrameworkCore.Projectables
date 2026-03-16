@@ -299,7 +299,7 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
         MethodDeclarationSyntax method,
         SourceProductionContext context)
     {
-        if (method.Parent is not TypeDeclarationSyntax containingType)
+        if (method.Parent is not TypeDeclarationSyntax)
         {
             return;
         }
@@ -325,10 +325,25 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
             return;
         }
 
-        // The return type's simple name must equal the containing class name.
-        var containingTypeName = containingType.Identifier.Text;
-        if (GetFactorySimpleTypeName(method.ReturnType) != containingTypeName
-            || GetFactorySimpleTypeName(creation.Type) != containingTypeName)
+        if (memberSymbol is not IMethodSymbol methodSymbol)
+        {
+            return;
+        }
+
+        var containingTypeSymbol = methodSymbol.ContainingType;
+        if (containingTypeSymbol is null)
+        {
+            return;
+        }
+
+        var createdTypeSymbol = semanticModel.GetTypeInfo(creation).Type;
+        if (createdTypeSymbol is null)
+        {
+            return;
+        }
+
+        if (!SymbolEqualityComparer.Default.Equals(methodSymbol.ReturnType, containingTypeSymbol)
+            || !SymbolEqualityComparer.Default.Equals(createdTypeSymbol, containingTypeSymbol))
         {
             return;
         }
@@ -338,14 +353,6 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
             method.Identifier.GetLocation(),
             method.Identifier.Text));
     }
-
-    private static string? GetFactorySimpleTypeName(TypeSyntax type) =>
-        type switch
-        {
-            IdentifierNameSyntax id => id.Identifier.Text,
-            QualifiedNameSyntax qn => qn.Right.Identifier.Text,
-            _ => null
-        };
 
     /// <summary>
     /// Extracts a <see cref="ProjectionRegistryEntry"/> from a member declaration.
