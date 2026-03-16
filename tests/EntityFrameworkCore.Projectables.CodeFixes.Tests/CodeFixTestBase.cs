@@ -15,7 +15,7 @@ namespace EntityFrameworkCore.Projectables.CodeFixes.Tests;
 /// </summary>
 public abstract class CodeFixTestBase
 {
-    protected static Document CreateDocument(string source)
+    protected static Document CreateDocument([StringSyntax("csharp")] string source)
     {
         var workspace = new AdhocWorkspace();
         var projectId = ProjectId.CreateNewId();
@@ -31,8 +31,37 @@ public abstract class CodeFixTestBase
         return solution.GetDocument(documentId)!;
     }
 
+    /// <summary>
+    /// Like <see cref="CreateDocument"/>, but also adds all trusted platform assemblies
+    /// so that the workspace's semantic model can resolve symbols fully.
+    /// Required by refactoring actions that call
+    /// <c>SymbolFinder.FindReferencesAsync</c> (e.g. "update callers").
+    /// </summary>
+    protected static Document CreateDocumentWithReferences([StringSyntax("csharp")] string source)
+    {
+        var workspace = new AdhocWorkspace();
+        var projectId = ProjectId.CreateNewId();
+        var documentId = DocumentId.CreateNewId(projectId);
+
+        var trustedAssemblies = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? string.Empty)
+            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => MetadataReference.CreateFromFile(p))
+            .Cast<MetadataReference>()
+            .ToList();
+
+        var solution = workspace.CurrentSolution
+            .AddProject(projectId, "TestProject", "TestProject", LanguageNames.CSharp)
+            .WithProjectCompilationOptions(
+                projectId,
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
+            .WithProjectMetadataReferences(projectId, trustedAssemblies)
+            .AddDocument(documentId, "Test.cs", SourceText.From(source));
+
+        return solution.GetDocument(documentId)!;
+    }
+
     private async static Task<(Document Document, IReadOnlyList<CodeAction> Actions)> CollectActionsAsync(
-        string source,
+        [StringSyntax("csharp")] string source,
         string diagnosticId,
         Func<SyntaxNode, TextSpan> locateDiagnosticSpan,
         CodeFixProvider provider)
@@ -70,7 +99,7 @@ public abstract class CodeFixTestBase
     /// returned by <paramref name="locateDiagnosticSpan"/>.
     /// </summary>
     protected async static Task<IReadOnlyList<CodeAction>> GetCodeFixActionsAsync(
-        string source,
+        [StringSyntax("csharp")] string source,
         string diagnosticId,
         Func<SyntaxNode, TextSpan> locateDiagnosticSpan,
         CodeFixProvider provider)
@@ -84,8 +113,7 @@ public abstract class CodeFixTestBase
     /// source text of the resulting document.
     /// </summary>
     protected async static Task<string> ApplyCodeFixAsync(
-        [StringSyntax("csharp")]
-        string source,
+        [StringSyntax("csharp")] string source,
         string diagnosticId,
         Func<SyntaxNode, TextSpan> locateDiagnosticSpan,
         CodeFixProvider provider,

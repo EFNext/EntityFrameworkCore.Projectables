@@ -1,0 +1,20 @@
+﻿
+namespace Foo {
+    class Src { public int A { get; set; } public int B { get; set; } }
+    class Dest {
+        public Dest()
+        {
+        }
+
+        public int A { get; set; }
+        public int B { get; set; }
+        [Projectable]
+        public Dest(Src src)
+        {
+            // primary field
+            A = src.A;
+            B = src.B // secondary field
+;
+        }
+    }
+}

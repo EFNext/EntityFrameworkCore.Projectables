@@ -74,5 +74,40 @@ public abstract class RefactoringTestBase : CodeFixTestBase
         var newRoot = await newDocument.GetSyntaxRootAsync();
         return newRoot!.ToFullString();
     }
-}
 
+    /// <summary>
+    /// Overload that accepts an already-created <paramref name="document"/>.
+    /// Use this when the document must carry metadata references (e.g. for
+    /// "update callers" actions that rely on <c>SymbolFinder.FindReferencesAsync</c>).
+    /// </summary>
+    protected async static Task<string> ApplyRefactoringAsync(
+        Document document,
+        Func<SyntaxNode, TextSpan> locateSpan,
+        CodeRefactoringProvider provider,
+        int actionIndex = 0)
+    {
+        var root = await document.GetSyntaxRootAsync();
+        var span = locateSpan(root!);
+
+        var actions = new List<CodeAction>();
+        var context = new CodeRefactoringContext(
+            document,
+            span,
+            action => actions.Add(action),
+            CancellationToken.None);
+
+        await provider.ComputeRefactoringsAsync(context);
+
+        Assert.True(
+            actions.Count > actionIndex,
+            $"Expected at least {actionIndex + 1} refactoring action(s) but only {actions.Count} were registered.");
+
+        var action = actions[actionIndex];
+        var operations = await action.GetOperationsAsync(CancellationToken.None);
+        var applyOp = operations.OfType<ApplyChangesOperation>().Single();
+
+        var newDocument = applyOp.ChangedSolution.GetDocument(document.Id)!;
+        var newRoot = await newDocument.GetSyntaxRootAsync();
+        return newRoot!.ToFullString();
+    }
+}

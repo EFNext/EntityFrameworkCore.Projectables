@@ -1,0 +1,19 @@
+﻿
+namespace Foo {
+    class Src { public int A { get; set; } }
+    class Dest {
+        public Dest() { }
+        public int A { get; set; }
+        [Projectable]
+        public Dest(Src src)
+        {
+            A = src.A;
+        }
+    }
+    class Consumer {
+        Dest Use(Src src) {
+            // map the source
+            return new Dest(src); // inline comment
+        }
+    }
+}

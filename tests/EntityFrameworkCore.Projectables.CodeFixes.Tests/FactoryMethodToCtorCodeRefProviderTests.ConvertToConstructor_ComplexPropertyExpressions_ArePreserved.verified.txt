@@ -1,0 +1,25 @@
+﻿
+namespace Foo {
+    class Src {
+        public int X { get; set; }
+        public int Y { get; set; }
+        public bool IsActive { get; set; }
+        public string Name { get; set; }
+    }
+    class Dest {
+        public Dest()
+        {
+        }
+
+        public int Sum { get; set; }
+        public int Toggle { get; set; }
+        public string Label { get; set; }
+        [Projectable]
+        public Dest(Src src)
+        {
+            Sum = src.X + src.Y;
+            Toggle = src.IsActive ? 1 : 0;
+            Label = src.Name ?? "unknown";
+        }
+    }
+}

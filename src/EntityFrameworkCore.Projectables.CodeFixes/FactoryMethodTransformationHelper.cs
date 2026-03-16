@@ -83,21 +83,118 @@ static internal class FactoryMethodTransformationHelper
             }
         }
 
-        // Apply the factory → constructor transformation on the declaring document.
         var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         if (root is null)
         {
             return solution;
         }
 
-        solution = solution.WithDocumentSyntaxRoot(
-            document.Id,
-            BuildRootWithConstructor(root, method, containingType));
+        // Map annotation → data needed to build the replacement node.
+        var invocationAnnotations = new Dictionary<SyntaxAnnotation,
+            (ArgumentListSyntax ArgList, SyntaxTriviaList Leading, SyntaxTriviaList Trailing)>();
 
-        // Replace each invocation with `new ReturnType(args)` in all caller documents.
+        var workingRoot = root;
+
+        if (locationsByDoc.TryGetValue(document.Id, out var declaringDocLocations))
+        {
+            // Use a Dictionary keyed by invocation node to deduplicate: multiple
+            // reference spans can resolve to the same InvocationExpressionSyntax.
+            var annotationByInvocation = new Dictionary<InvocationExpressionSyntax, SyntaxAnnotation>();
+
+            foreach (var refLocation in declaringDocLocations)
+            {
+                var refNode = root.FindNode(refLocation.Location.SourceSpan);
+                var invocation = refNode.AncestorsAndSelf()
+                    .OfType<InvocationExpressionSyntax>()
+                    .FirstOrDefault();
+
+                if (invocation is null || invocation.Parent is ConditionalAccessExpressionSyntax)
+                {
+                    continue;
+                }
+
+                if (annotationByInvocation.ContainsKey(invocation))
+                {
+                    // Same invocation reached via a different reference span — skip.
+                    continue;
+                }
+
+                var ann = new SyntaxAnnotation();
+                invocationAnnotations[ann] = (
+                    invocation.ArgumentList,
+                    invocation.GetLeadingTrivia(),
+                    invocation.GetTrailingTrivia());
+                annotationByInvocation[invocation] = ann;
+            }
+
+            if (annotationByInvocation.Count > 0)
+            {
+                // Annotate all unique invocations in one ReplaceNodes pass.
+                // This does NOT shift spans — only metadata is added.
+                workingRoot = root.ReplaceNodes(
+                    annotationByInvocation.Keys,
+                    (original, _) => original.WithAdditionalAnnotations(annotationByInvocation[original]));
+            }
+        }
+
+        // Re-find method and containingType in workingRoot by their original spans
+        // (safe because adding annotations does not shift spans).
+        var currentMethod = workingRoot.FindNode(method.Span) as MethodDeclarationSyntax ?? method;
+        var currentContainingType = workingRoot.FindNode(containingType.Span) as TypeDeclarationSyntax ?? containingType;
+
+        // Apply the factory → constructor transformation.
+        // Annotated call-site nodes that live OUTSIDE the transformed type survive
+        // untouched (annotations are preserved by ReplaceNode).
+        var transformedRoot = BuildRootWithConstructor(workingRoot, currentMethod, currentContainingType);
+
+        // Replace annotated invocations — found by annotation, not by span.
+        var finalDeclaringRoot = transformedRoot;
+        foreach (var annEntry in invocationAnnotations)
+        {
+            var ann = annEntry.Key;
+            var argList = annEntry.Value.ArgList;
+            var leading = annEntry.Value.Leading;
+            var trailing = annEntry.Value.Trailing;
+
+            var annotatedInvocation = finalDeclaringRoot
+                .GetAnnotatedNodes(ann)
+                .OfType<InvocationExpressionSyntax>()
+                .FirstOrDefault();
+
+            if (annotatedInvocation is null)
+            {
+                continue;
+            }
+
+            // Rewrite:  instance.FactoryMethod(args)  →  new ReturnType(args)
+            var newCreation = SyntaxFactory
+                .ObjectCreationExpression(
+                    SyntaxFactory.Token(SyntaxKind.NewKeyword)
+                        .WithTrailingTrivia(SyntaxFactory.Space),
+                    returnTypeSyntax,
+                    argList,
+                    initializer: null)
+                .WithLeadingTrivia(leading)
+                .WithTrailingTrivia(trailing);
+
+            finalDeclaringRoot = finalDeclaringRoot.ReplaceNode(annotatedInvocation, newCreation);
+        }
+
+        solution = solution.WithDocumentSyntaxRoot(document.Id, finalDeclaringRoot);
+
+        // -----------------------------------------------------------------------
+        // Other caller documents — spans in these roots are still the original
+        // unmodified spans, so the existing end-to-start approach is correct.
+        // -----------------------------------------------------------------------
         foreach (var kvp in locationsByDoc)
         {
             var docId = kvp.Key;
+            if (docId == document.Id)
+            {
+                // Already handled above via annotations.
+                continue;
+            }
+
             var locations = kvp.Value;
 
             var callerDoc = solution.GetDocument(docId);

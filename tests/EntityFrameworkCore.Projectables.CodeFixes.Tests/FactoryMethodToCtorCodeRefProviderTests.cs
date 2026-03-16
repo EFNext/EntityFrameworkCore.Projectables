@@ -240,4 +240,139 @@ namespace Foo {
         Assert.Contains("constructor", actions[0].Title, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("callers", actions[1].Title, StringComparison.OrdinalIgnoreCase);
     }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // Action 1 — convert factory method to constructor AND update callers
+    // ────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Regression test: when the declaring document also contains call sites,
+    /// BuildRootWithConstructor shifts all spans (it removes the factory method and
+    /// inserts a constructor). Only <c>Dest.Map(…)</c> must be rewritten —
+    /// unrelated invocations such as <c>Other.Compute()</c> must be left intact.
+    /// </summary>
+    [Fact]
+    public Task UpdateCallers_SameDocument_OnlyReplacesFactoryCallSite() =>
+        Verifier.Verify(
+            ApplyRefactoringAsync(
+                CreateDocumentWithReferences(@"
+namespace Foo {
+    class Src { public int A { get; set; } public int B { get; set; } }
+    class Dest {
+        public Dest() { }
+        public int A { get; set; }
+        public int B { get; set; }
+        [Projectable]
+        public static Dest Map(Src src) => new Dest { A = src.A, B = src.B };
+    }
+    class Other {
+        public static int Compute() => 42;
+    }
+    class Consumer {
+        void Setup() {
+            var d = Dest.Map(new Src { A = 1, B = 2 });
+            var x = Other.Compute();
+        }
+    }
+}"),
+                FirstMethodIdentifierSpan,
+                _provider,
+                actionIndex: 1));
+
+    [Fact]
+    public Task UpdateCallers_PreservesCallSiteTrivia() =>
+        Verifier.Verify(
+            ApplyRefactoringAsync(
+                CreateDocumentWithReferences(@"
+namespace Foo {
+    class Src { public int A { get; set; } }
+    class Dest {
+        public Dest() { }
+        public int A { get; set; }
+        [Projectable]
+        public static Dest Map(Src src) => new Dest { A = src.A };
+    }
+    class Consumer {
+        Dest Use(Src src) {
+            // map the source
+            return Dest.Map(src); // inline comment
+        }
+    }
+}"),
+                FirstMethodIdentifierSpan,
+                _provider,
+                actionIndex: 1));
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // Complex initializer expressions and trivia preservation (action 0)
+    // ────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public Task ConvertToConstructor_ComplexPropertyExpressions_ArePreserved() =>
+        Verifier.Verify(
+            ApplyRefactoringAsync(
+                @"
+namespace Foo {
+    class Src {
+        public int X { get; set; }
+        public int Y { get; set; }
+        public bool IsActive { get; set; }
+        public string Name { get; set; }
+    }
+    class Dest {
+        public int Sum { get; set; }
+        public int Toggle { get; set; }
+        public string Label { get; set; }
+        [Projectable]
+        public static Dest Map(Src src) => new Dest {
+            Sum = src.X + src.Y,
+            Toggle = src.IsActive ? 1 : 0,
+            Label = src.Name ?? ""unknown""
+        };
+    }
+}",
+                FirstMethodIdentifierSpan,
+                _provider,
+                actionIndex: 0));
+
+    [Fact]
+    public Task ConvertToConstructor_PreservesLeadingXmlDocComment() =>
+        Verifier.Verify(
+            ApplyRefactoringAsync(
+                @"
+namespace Foo {
+    class Src { public int A { get; set; } }
+    class Dest {
+        public int A { get; set; }
+        /// <summary>Creates a new <see cref=""Dest""/> from a <see cref=""Src""/>.</summary>
+        /// <param name=""src"">The source object.</param>
+        [Projectable]
+        public static Dest Map(Src src) => new Dest { A = src.A };
+    }
+}",
+                FirstMethodIdentifierSpan,
+                _provider,
+                actionIndex: 0));
+
+    [Fact]
+    public Task ConvertToConstructor_PreservesInitializerInlineComments() =>
+        Verifier.Verify(
+            ApplyRefactoringAsync(
+                @"
+namespace Foo {
+    class Src { public int A { get; set; } public int B { get; set; } }
+    class Dest {
+        public int A { get; set; }
+        public int B { get; set; }
+        [Projectable]
+        public static Dest Map(Src src) => new Dest {
+            // primary field
+            A = src.A,
+            B = src.B // secondary field
+        };
+    }
+}",
+                FirstMethodIdentifierSpan,
+                _provider,
+                actionIndex: 0));
 }

@@ -1,0 +1,18 @@
+﻿
+namespace Foo {
+    class Src { public int A { get; set; } }
+    class Dest {
+        public Dest()
+        {
+        }
+
+        public int A { get; set; }
+        /// <summary>Creates a new <see cref="Dest"/> from a <see cref="Src"/>.</summary>
+        /// <param name="src">The source object.</param>
+        [Projectable]
+        public Dest(Src src)
+        {
+            A = src.A;
+        }
+    }
+}
