@@ -11,7 +11,7 @@ namespace EntityFrameworkCore.Projectables.CodeFixes.Tests;
 /// Each test verifies via Verify.Xunit snapshots (.verified.txt files).
 /// </summary>
 [UsesVerify]
-public class FactoryMethodToConstructorCodeRefactoringProviderTests : RefactoringTestBase
+public class FactoryMethodToCtorCodeRefProviderTests : RefactoringTestBase
 {
     private static readonly FactoryMethodToConstructorCodeRefactoringProvider _provider = new();
 

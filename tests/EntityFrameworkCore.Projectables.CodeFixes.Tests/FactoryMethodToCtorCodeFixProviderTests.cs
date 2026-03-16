@@ -7,13 +7,13 @@ using Xunit;
 namespace EntityFrameworkCore.Projectables.CodeFixes.Tests;
 
 /// <summary>
-/// Tests for <see cref="FactoryMethodToConstructorCodeFixProvider"/> (EFP0012).
+/// Tests for <see cref="FactoryMethodToCtorCodeFixProvider"/> (EFP0012).
 /// Verifies the code fix output via Verify.Xunit snapshots.
 /// </summary>
 [UsesVerify]
-public class FactoryMethodToConstructorCodeFixProviderTests : CodeFixTestBase
+public class FactoryMethodToCtorCodeFixProviderTests : CodeFixTestBase
 {
-    private static readonly FactoryMethodToConstructorCodeFixProvider _provider = new();
+    private static readonly FactoryMethodToCtorCodeFixProvider _provider = new();
 
     private static TextSpan FirstMethodIdentifierSpan(SyntaxNode root) =>
         root.DescendantNodes()

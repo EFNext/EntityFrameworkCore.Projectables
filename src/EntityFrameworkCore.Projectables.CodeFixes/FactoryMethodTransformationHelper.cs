@@ -9,7 +9,7 @@ namespace EntityFrameworkCore.Projectables.CodeFixes;
 /// <summary>
 /// Shared helpers for the factory-method → projectable-constructor transformation.
 /// Used by both <see cref="FactoryMethodToConstructorCodeRefactoringProvider"/> and
-/// <see cref="FactoryMethodToConstructorCodeFixProvider"/>.
+/// <see cref="FactoryMethodToCtorCodeFixProvider"/>.
 /// </summary>
 static internal class FactoryMethodTransformationHelper
 {

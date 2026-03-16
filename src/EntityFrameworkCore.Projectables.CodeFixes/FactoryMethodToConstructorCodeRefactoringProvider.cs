@@ -19,7 +19,7 @@ namespace EntityFrameworkCore.Projectables.CodeFixes;
 /// </list>
 /// </para>
 /// <para>
-/// This provider is complementary to <see cref="FactoryMethodToConstructorCodeFixProvider"/>,
+/// This provider is complementary to <see cref="FactoryMethodToCtorCodeFixProvider"/>,
 /// which fixes the <c>EFP0012</c> diagnostic. The refactoring provider remains useful when
 /// the diagnostic is suppressed.
 /// </para>

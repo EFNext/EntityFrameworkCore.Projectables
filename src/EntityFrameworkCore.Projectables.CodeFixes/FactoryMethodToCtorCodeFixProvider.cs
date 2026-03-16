@@ -16,9 +16,9 @@ namespace EntityFrameworkCore.Projectables.CodeFixes;
 ///       callers throughout the solution.</description></item>
 /// </list>
 /// </summary>
-[ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(FactoryMethodToConstructorCodeFixProvider))]
+[ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(FactoryMethodToCtorCodeFixProvider))]
 [Shared]
-public sealed class FactoryMethodToConstructorCodeFixProvider : CodeFixProvider
+public sealed class FactoryMethodToCtorCodeFixProvider : CodeFixProvider
 {
     /// <inheritdoc />
     public override ImmutableArray<string> FixableDiagnosticIds => ["EFP0012"];
