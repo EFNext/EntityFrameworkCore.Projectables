@@ -57,7 +57,36 @@ static internal class FactoryMethodTransformationHelper
 
         if (method.ExpressionBody.Expression is not ObjectCreationExpressionSyntax creationExpr)
         {
-            return false;
+            if (method.ExpressionBody.Expression is not ImplicitObjectCreationExpressionSyntax implicitCreation)
+            {
+                return false;
+            }
+
+            if (implicitCreation.ArgumentList?.Arguments.Count > 0)
+            {
+                return false;
+            }
+
+            if (implicitCreation.Initializer is null)
+            {
+                return false;
+            }
+
+            var containingTypeName = typeDecl.Identifier.Text;
+            if (GetSimpleTypeName(method.ReturnType) != containingTypeName)
+            {
+                return false;
+            }
+
+            var typeSyntax = SyntaxFactory.IdentifierName(containingTypeName);
+            var objectCreation = SyntaxFactory.ObjectCreationExpression(
+                typeSyntax,
+                implicitCreation.ArgumentList ?? SyntaxFactory.ArgumentList(),
+                implicitCreation.Initializer);
+
+            containingType = typeDecl;
+            creation = objectCreation;
+            return true;
         }
 
         // Require a pure object-initializer body (no constructor arguments on the new expression).
