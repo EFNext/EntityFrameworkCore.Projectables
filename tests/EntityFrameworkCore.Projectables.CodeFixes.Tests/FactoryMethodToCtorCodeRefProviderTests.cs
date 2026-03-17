@@ -304,6 +304,96 @@ namespace Foo {
                 actionIndex: 1));
 
     // ────────────────────────────────────────────────────────────────────────────
+    // Action 1 — method group callers (e.g. .Select(Dest.Map))
+    // ────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// A single-parameter method group passed to <c>Select</c> must be rewritten to a
+    /// simple lambda: <c>Dest.Map</c> → <c>src => new Dest(src)</c>.
+    /// </summary>
+    [Fact]
+    public Task UpdateCallers_MethodGroup_SingleParameter() =>
+        Verifier.Verify(
+            ApplyRefactoringAsync(
+                CreateDocumentWithReferences(@"
+using System.Collections.Generic;
+using System.Linq;
+namespace Foo {
+    class Src { public int A { get; set; } }
+    class Dest {
+        public Dest() { }
+        public int A { get; set; }
+        [Projectable]
+        public static Dest Map(Src src) => new Dest { A = src.A };
+    }
+    class Consumer {
+        Dest[] Use(IEnumerable<Src> items) => items.Select(Dest.Map).ToArray();
+    }
+}"),
+                FirstMethodIdentifierSpan,
+                _provider,
+                actionIndex: 1));
+
+    /// <summary>
+    /// A multi-parameter method group assigned to a delegate variable must be rewritten
+    /// to a parenthesised lambda: <c>Dest.Map</c> → <c>(src, offset) => new Dest(src, offset)</c>.
+    /// </summary>
+    [Fact]
+    public Task UpdateCallers_MethodGroup_MultipleParameters() =>
+        Verifier.Verify(
+            ApplyRefactoringAsync(
+                CreateDocumentWithReferences(@"
+using System;
+namespace Foo {
+    class Src { public int A { get; set; } }
+    class Dest {
+        public Dest() { }
+        public int A { get; set; }
+        public int Offset { get; set; }
+        [Projectable]
+        public static Dest Map(Src src, int offset) => new Dest { A = src.A, Offset = offset };
+    }
+    class Consumer {
+        void Register(Func<Src, int, Dest> factory) { }
+        void Setup() => Register(Dest.Map);
+    }
+}"),
+                FirstMethodIdentifierSpan,
+                _provider,
+                actionIndex: 1));
+
+    /// <summary>
+    /// When the same document has both a direct invocation <em>and</em> a method-group
+    /// reference to the same factory method, both must be rewritten correctly and
+    /// independently.
+    /// </summary>
+    [Fact]
+    public Task UpdateCallers_MixedDirectInvocationAndMethodGroup() =>
+        Verifier.Verify(
+            ApplyRefactoringAsync(
+                CreateDocumentWithReferences(@"
+using System.Collections.Generic;
+using System.Linq;
+namespace Foo {
+    class Src { public int A { get; set; } }
+    class Dest {
+        public Dest() { }
+        public int A { get; set; }
+        [Projectable]
+        public static Dest Map(Src src) => new Dest { A = src.A };
+    }
+    class Consumer {
+        void Setup(IEnumerable<Src> items) {
+            var d = Dest.Map(new Src { A = 1 });         // direct invocation
+            var all = items.Select(Dest.Map).ToArray();  // method group
+        }
+    }
+}"),
+                FirstMethodIdentifierSpan,
+                _provider,
+                actionIndex: 1));
+
+    // ────────────────────────────────────────────────────────────────────────────
     // Complex initializer expressions and trivia preservation (action 0)
     // ────────────────────────────────────────────────────────────────────────────
 

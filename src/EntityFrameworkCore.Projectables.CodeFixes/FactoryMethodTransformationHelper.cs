@@ -57,6 +57,7 @@ static internal class FactoryMethodTransformationHelper
         }
 
         var solution = document.Project.Solution;
+        var methodParamNames = methodSymbol.Parameters.Select(p => p.Name).ToArray();
         var returnType = methodSymbol.ReturnType;
         var returnTypeSyntax = SyntaxFactory
             .ParseTypeName(returnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
@@ -92,48 +93,83 @@ static internal class FactoryMethodTransformationHelper
         // Map annotation → data needed to build the replacement node.
         var invocationAnnotations = new Dictionary<SyntaxAnnotation,
             (ArgumentListSyntax ArgList, SyntaxTriviaList Leading, SyntaxTriviaList Trailing)>();
+        var methodGroupAnnotations = new Dictionary<SyntaxAnnotation,
+            (SyntaxTriviaList Leading, SyntaxTriviaList Trailing)>();
 
         var workingRoot = root;
 
         if (locationsByDoc.TryGetValue(document.Id, out var declaringDocLocations))
         {
-            // Use a Dictionary keyed by invocation node to deduplicate: multiple
-            // reference spans can resolve to the same InvocationExpressionSyntax.
+            // Use Dictionaries keyed by node to deduplicate: multiple reference spans
+            // can resolve to the same syntax node.
             var annotationByInvocation = new Dictionary<InvocationExpressionSyntax, SyntaxAnnotation>();
+            var annotationByMethodGroup = new Dictionary<SyntaxNode, SyntaxAnnotation>();
 
             foreach (var refLocation in declaringDocLocations)
             {
                 var refNode = root.FindNode(refLocation.Location.SourceSpan);
-                var invocation = refNode.AncestorsAndSelf()
-                    .OfType<InvocationExpressionSyntax>()
-                    .FirstOrDefault();
 
-                if (invocation is null || invocation.Parent is ConditionalAccessExpressionSyntax)
+                // Determine the method-reference expression: qualified (Class.Method) or simple (Method).
+                var methodRefExpr = refNode.Parent is MemberAccessExpressionSyntax maExpr && maExpr.Name == refNode
+                    ? maExpr
+                    : (ExpressionSyntax)refNode;
+
+                if (methodRefExpr.Parent is InvocationExpressionSyntax invocation
+                    && invocation.Expression == methodRefExpr)
                 {
-                    continue;
-                }
+                    // Direct invocation: Class.Method(args) → new ReturnType(args)
+                    if (invocation.Parent is ConditionalAccessExpressionSyntax)
+                    {
+                        continue;
+                    }
 
-                if (annotationByInvocation.ContainsKey(invocation))
+                    if (annotationByInvocation.ContainsKey(invocation))
+                    {
+                        // Same invocation reached via a different reference span — skip.
+                        continue;
+                    }
+
+                    var ann = new SyntaxAnnotation();
+                    invocationAnnotations[ann] = (
+                        invocation.ArgumentList,
+                        invocation.GetLeadingTrivia(),
+                        invocation.GetTrailingTrivia());
+                    annotationByInvocation[invocation] = ann;
+                }
+                else
                 {
-                    // Same invocation reached via a different reference span — skip.
-                    continue;
-                }
+                    // Method group: Class.Method → p1 => new ReturnType(p1)
+                    if (annotationByMethodGroup.ContainsKey(methodRefExpr))
+                    {
+                        continue;
+                    }
 
-                var ann = new SyntaxAnnotation();
-                invocationAnnotations[ann] = (
-                    invocation.ArgumentList,
-                    invocation.GetLeadingTrivia(),
-                    invocation.GetTrailingTrivia());
-                annotationByInvocation[invocation] = ann;
+                    var ann = new SyntaxAnnotation();
+                    methodGroupAnnotations[ann] = (
+                        methodRefExpr.GetLeadingTrivia(),
+                        methodRefExpr.GetTrailingTrivia());
+                    annotationByMethodGroup[methodRefExpr] = ann;
+                }
             }
 
-            if (annotationByInvocation.Count > 0)
+            // Merge all nodes-to-annotate into one ReplaceNodes pass (does NOT shift spans).
+            var nodesToAnnotate = new Dictionary<SyntaxNode, SyntaxAnnotation>(
+                annotationByInvocation.Count + annotationByMethodGroup.Count);
+            foreach (var kvp in annotationByInvocation)
             {
-                // Annotate all unique invocations in one ReplaceNodes pass.
-                // This does NOT shift spans — only metadata is added.
+                nodesToAnnotate[kvp.Key] = kvp.Value;
+            }
+
+            foreach (var kvp in annotationByMethodGroup)
+            {
+                nodesToAnnotate[kvp.Key] = kvp.Value;
+            }
+
+            if (nodesToAnnotate.Count > 0)
+            {
                 workingRoot = root.ReplaceNodes(
-                    annotationByInvocation.Keys,
-                    (original, _) => original.WithAdditionalAnnotations(annotationByInvocation[original]));
+                    nodesToAnnotate.Keys,
+                    (original, _) => original.WithAdditionalAnnotations(nodesToAnnotate[original]));
             }
         }
 
@@ -180,6 +216,29 @@ static internal class FactoryMethodTransformationHelper
             finalDeclaringRoot = finalDeclaringRoot.ReplaceNode(annotatedInvocation, newCreation);
         }
 
+        // Replace annotated method groups with lambdas: Class.Method → p => new ReturnType(p)
+        foreach (var annEntry in methodGroupAnnotations)
+        {
+            var ann = annEntry.Key;
+            var leading = annEntry.Value.Leading;
+            var trailing = annEntry.Value.Trailing;
+
+            var annotatedMethodGroup = finalDeclaringRoot
+                .GetAnnotatedNodes(ann)
+                .FirstOrDefault();
+
+            if (annotatedMethodGroup is null)
+            {
+                continue;
+            }
+
+            var lambda = BuildMethodGroupLambda(methodParamNames, returnTypeSyntax)
+                .WithLeadingTrivia(leading)
+                .WithTrailingTrivia(trailing);
+
+            finalDeclaringRoot = finalDeclaringRoot.ReplaceNode(annotatedMethodGroup, lambda);
+        }
+
         solution = solution.WithDocumentSyntaxRoot(document.Id, finalDeclaringRoot);
 
         // -----------------------------------------------------------------------
@@ -214,34 +273,44 @@ static internal class FactoryMethodTransformationHelper
             foreach (var refLocation in locations.OrderByDescending(l => l.Location.SourceSpan.Start))
             {
                 var refNode = newCallerRoot.FindNode(refLocation.Location.SourceSpan);
-                var invocation = refNode.AncestorsAndSelf()
-                    .OfType<InvocationExpressionSyntax>()
-                    .FirstOrDefault();
 
-                if (invocation is null)
+                // Determine the method-reference expression: qualified (Class.Method) or simple (Method).
+                var methodRefExpr = refNode.Parent is MemberAccessExpressionSyntax maExpr && maExpr.Name == refNode
+                    ? maExpr
+                    : (ExpressionSyntax)refNode;
+
+                if (methodRefExpr.Parent is InvocationExpressionSyntax invocation
+                    && invocation.Expression == methodRefExpr)
                 {
-                    continue;
-                }
+                    // Skip conditional-access invocations like x?.FactoryMethod(...)
+                    // to avoid producing invalid syntax such as x?.new ReturnType(...).
+                    if (invocation.Parent is ConditionalAccessExpressionSyntax)
+                    {
+                        continue;
+                    }
 
-                // Skip conditional-access invocations like x?.FactoryMethod(...)
-                // to avoid producing invalid syntax such as x?.new ReturnType(...).
-                if (invocation.Parent is ConditionalAccessExpressionSyntax)
+                    // Rewrite: Class.Method(args) → new ReturnType(args)
+                    var newCreation = SyntaxFactory
+                        .ObjectCreationExpression(
+                            SyntaxFactory.Token(SyntaxKind.NewKeyword)
+                                .WithTrailingTrivia(SyntaxFactory.Space),
+                            returnTypeSyntax,
+                            invocation.ArgumentList,
+                            initializer: null)
+                        .WithLeadingTrivia(invocation.GetLeadingTrivia())
+                        .WithTrailingTrivia(invocation.GetTrailingTrivia());
+
+                    newCallerRoot = newCallerRoot.ReplaceNode(invocation, newCreation);
+                }
+                else
                 {
-                    continue;
+                    // Method group: Class.Method → p => new ReturnType(p)
+                    var lambda = BuildMethodGroupLambda(methodParamNames, returnTypeSyntax)
+                        .WithLeadingTrivia(methodRefExpr.GetLeadingTrivia())
+                        .WithTrailingTrivia(methodRefExpr.GetTrailingTrivia());
+
+                    newCallerRoot = newCallerRoot.ReplaceNode(methodRefExpr, lambda);
                 }
-
-                // Rewrite:  instance.FactoryMethod(args)  →  new ReturnType(args)
-                var newCreation = SyntaxFactory
-                    .ObjectCreationExpression(
-                        SyntaxFactory.Token(SyntaxKind.NewKeyword)
-                            .WithTrailingTrivia(SyntaxFactory.Space),
-                        returnTypeSyntax,
-                        invocation.ArgumentList,
-                        initializer: null)
-                    .WithLeadingTrivia(invocation.GetLeadingTrivia())
-                    .WithTrailingTrivia(invocation.GetTrailingTrivia());
-
-                newCallerRoot = newCallerRoot.ReplaceNode(invocation, newCreation);
             }
 
             solution = solution.WithDocumentSyntaxRoot(docId, newCallerRoot);
@@ -326,6 +395,46 @@ static internal class FactoryMethodTransformationHelper
                 !m.IsKind(SyntaxKind.UnsafeKeyword));
 
         return SyntaxFactory.TokenList(filteredModifiers);
+    }
+
+    /// <summary>
+    /// Builds a lambda expression that wraps a constructor call, for use when a factory
+    /// method is referenced as a method group (e.g. <c>Select(MyType.Create)</c>).
+    /// <list type="bullet">
+    ///   <item>Single parameter → simple lambda: <c>p =&gt; new ReturnType(p)</c></item>
+    ///   <item>Multiple parameters → parenthesised lambda: <c>(p1, p2) =&gt; new ReturnType(p1, p2)</c></item>
+    /// </list>
+    /// </summary>
+    private static LambdaExpressionSyntax BuildMethodGroupLambda(
+        string[] paramNames,
+        TypeSyntax returnTypeSyntax)
+    {
+        var parameters = paramNames
+            .Select(name => SyntaxFactory.Parameter(SyntaxFactory.Identifier(name)))
+            .ToArray();
+
+        var arguments = paramNames
+            .Select(name => SyntaxFactory.Argument(SyntaxFactory.IdentifierName(name)))
+            .ToArray();
+
+        var objectCreation = SyntaxFactory.ObjectCreationExpression(
+            SyntaxFactory.Token(SyntaxKind.NewKeyword).WithTrailingTrivia(SyntaxFactory.Space),
+            returnTypeSyntax,
+            SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList(arguments)),
+            initializer: null);
+
+        if (parameters.Length == 1)
+        {
+            return SyntaxFactory
+                .SimpleLambdaExpression(parameters[0], objectCreation)
+                .WithAdditionalAnnotations(Formatter.Annotation);
+        }
+
+        return SyntaxFactory
+            .ParenthesizedLambdaExpression(
+                SyntaxFactory.ParameterList(SyntaxFactory.SeparatedList(parameters)),
+                objectCreation)
+            .WithAdditionalAnnotations(Formatter.Annotation);
     }
 }
 
