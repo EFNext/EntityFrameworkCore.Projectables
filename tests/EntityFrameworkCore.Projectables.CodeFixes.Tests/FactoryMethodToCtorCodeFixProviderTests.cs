@@ -1,10 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
-using VerifyXunit;
-using Xunit;
-
-namespace EntityFrameworkCore.Projectables.CodeFixes.Tests;
+﻿namespace EntityFrameworkCore.Projectables.CodeFixes.Tests;
 
 /// <summary>
 /// Tests for <see cref="FactoryMethodToCtorCodeFixProvider"/> (EFP0012).
@@ -13,14 +7,7 @@ namespace EntityFrameworkCore.Projectables.CodeFixes.Tests;
 [UsesVerify]
 public class FactoryMethodToCtorCodeFixProviderTests : CodeFixTestBase
 {
-    private static readonly FactoryMethodToCtorCodeFixProvider _provider = new();
-
-    private static TextSpan FirstMethodIdentifierSpan(SyntaxNode root) =>
-        root.DescendantNodes()
-            .OfType<MethodDeclarationSyntax>()
-            .First()
-            .Identifier
-            .Span;
+    private readonly static FactoryMethodToCtorCodeFixProvider _provider = new();
 
     [Fact]
     public void FixableDiagnosticIds_ContainsEFP0012() =>
@@ -30,17 +17,9 @@ public class FactoryMethodToCtorCodeFixProviderTests : CodeFixTestBase
     public Task CodeFix_SimpleStaticFactoryMethod() =>
         Verifier.Verify(
             ApplyCodeFixAsync(
-                @"
-namespace Foo {
-    class OtherObj { public string Prop1 { get; set; } }
-    class MyObj {
-        public string Prop1 { get; set; }
-        [Projectable]
-        public static MyObj Create(OtherObj obj) => new MyObj { Prop1 = obj.Prop1 };
-    }
-}",
+                FactoryMethodToCtorSources.SimpleStaticFactoryMethod,
                 "EFP0012",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
@@ -48,16 +27,9 @@ namespace Foo {
     public Task CodeFix_PreservesProjectableOptions() =>
         Verifier.Verify(
             ApplyCodeFixAsync(
-                @"
-namespace Foo {
-    class OtherObj { }
-    class MyObj {
-        [Projectable(NullConditionalRewriteSupport = NullConditionalRewriteSupport.Ignore)]
-        public static MyObj Create(OtherObj obj) => new MyObj { };
-    }
-}",
+                FactoryMethodToCtorSources.PreservesProjectableOptions,
                 "EFP0012",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
@@ -65,34 +37,19 @@ namespace Foo {
     public Task CodeFix_AddsParameterlessConstructor_WhenNoneExists() =>
         Verifier.Verify(
             ApplyCodeFixAsync(
-                @"
-namespace Foo {
-    class Input { }
-    class Output {
-        [Projectable]
-        public static Output Create(Input i) => new Output { };
-    }
-}",
+                FactoryMethodToCtorSources.AddsParameterlessConstructor,
                 "EFP0012",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
     [Fact]
-    public Task CodeFix_DoesNotAddParameterlessConstructor_WhenAlreadyPresent() =>
+    public Task CodeFix_DoesNotAddParamLessCtor_WhenAlreadyPresent() =>
         Verifier.Verify(
             ApplyCodeFixAsync(
-                @"
-namespace Foo {
-    class Input { }
-    class Output {
-        public Output() { }
-        [Projectable]
-        public static Output Create(Input i) => new Output { };
-    }
-}",
+                FactoryMethodToCtorSources.ParameterlessConstructorAlreadyPresent,
                 "EFP0012",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
@@ -102,21 +59,12 @@ namespace Foo {
     /// must NOT insert one, which would unintentionally widen the public surface area.
     /// </summary>
     [Fact]
-    public Task CodeFix_DoesNotAddParameterlessConstructor_WhenOtherExplicitCtorExists() =>
+    public Task CodeFix_DoesNotAddParamLessCtor_WhenOtherExplicitCtorExists() =>
         Verifier.Verify(
             ApplyCodeFixAsync(
-                @"
-namespace Foo {
-    class Input { public int Value { get; set; } }
-    class Output {
-        public int Value { get; set; }
-        public Output(string name) { }
-        [Projectable]
-        public static Output Create(Input i) => new Output { Value = i.Value };
-    }
-}",
+                FactoryMethodToCtorSources.OtherExplicitCtorExists,
                 "EFP0012",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
@@ -129,17 +77,9 @@ namespace Foo {
     public Task CodeFix_InsertedParameterlessCtorIsAlwaysPublic() =>
         Verifier.Verify(
             ApplyCodeFixAsync(
-                @"
-namespace Foo {
-    class Input { }
-    class Output {
-        public int Value { get; set; }
-        [Projectable]
-        internal static Output Create(Input i) => new Output { };
-    }
-}",
+                FactoryMethodToCtorSources.InsertedParameterlessCtorIsAlwaysPublic,
                 "EFP0012",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
@@ -153,17 +93,9 @@ namespace Foo {
     public Task CodeFix_ImplicitObjectCreation() =>
         Verifier.Verify(
             ApplyCodeFixAsync(
-                @"
-namespace Foo {
-    class OtherObj { public string Prop1 { get; set; } }
-    class MyObj {
-        public string Prop1 { get; set; }
-        [Projectable]
-        public static MyObj Create(OtherObj obj) => new() { Prop1 = obj.Prop1 };
-    }
-}",
+                FactoryMethodToCtorSources.ImplicitObjectCreation,
                 "EFP0012",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
@@ -171,15 +103,9 @@ namespace Foo {
     public async Task TwoCodeFixActionsAreOffered()
     {
         var actions = await GetCodeFixActionsAsync(
-            @"
-namespace Foo {
-    class MyObj {
-        [Projectable]
-        public static MyObj Create() => new MyObj { };
-    }
-}",
+            FactoryMethodToCtorSources.TwoActionsSource,
             "EFP0012",
-            FirstMethodIdentifierSpan,
+            FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
             _provider);
 
         Assert.Equal(2, actions.Count);
@@ -199,7 +125,7 @@ namespace Foo {
     }
 }",
             "EFP0012",
-            FirstMethodIdentifierSpan,
+            FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
             _provider);
 
         Assert.Empty(actions);

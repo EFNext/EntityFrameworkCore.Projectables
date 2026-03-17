@@ -1,7 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
-using VerifyXunit;
+﻿using VerifyXunit;
 using Xunit;
 
 namespace EntityFrameworkCore.Projectables.CodeFixes.Tests;
@@ -13,15 +10,7 @@ namespace EntityFrameworkCore.Projectables.CodeFixes.Tests;
 [UsesVerify]
 public class FactoryMethodToCtorCodeRefProviderTests : RefactoringTestBase
 {
-    private static readonly FactoryMethodToConstructorCodeRefactoringProvider _provider = new();
-
-    // Locates the span of the first method identifier — the provider walks up to MethodDeclarationSyntax.
-    private static TextSpan FirstMethodIdentifierSpan(SyntaxNode root) =>
-        root.DescendantNodes()
-            .OfType<MethodDeclarationSyntax>()
-            .First()
-            .Identifier
-            .Span;
+    private readonly static FactoryMethodToConstructorCodeRefactoringProvider _provider = new();
 
     // ────────────────────────────────────────────────────────────────────────────
     // Action 0 — convert factory method to constructor (document only)
@@ -31,16 +20,8 @@ public class FactoryMethodToCtorCodeRefProviderTests : RefactoringTestBase
     public Task ConvertToConstructor_SimpleFactoryMethod() =>
         Verifier.Verify(
             ApplyRefactoringAsync(
-                @"
-namespace Foo {
-    class OtherObj { public string Prop1 { get; set; } }
-    class MyObj {
-        public string Prop1 { get; set; }
-        [Projectable]
-        public static MyObj Create(OtherObj obj) => new MyObj { Prop1 = obj.Prop1 };
-    }
-}",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.SimpleStaticFactoryMethod,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
@@ -48,15 +29,8 @@ namespace Foo {
     public Task ConvertToConstructor_PreservesProjectableOptions() =>
         Verifier.Verify(
             ApplyRefactoringAsync(
-                @"
-namespace Foo {
-    class OtherObj { }
-    class MyObj {
-        [Projectable(NullConditionalRewriteSupport = NullConditionalRewriteSupport.Ignore)]
-        public static MyObj Create(OtherObj obj) => new MyObj { };
-    }
-}",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.PreservesProjectableOptions,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
@@ -74,40 +48,25 @@ namespace Foo {
         public static Dest Map(Src src) => new Dest { A = src.A, B = src.B };
     }
 }",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
     [Fact]
-    public Task ConvertToConstructor_AddsParameterlessConstructor_WhenNoneExists() =>
+    public Task ConvertToConstructor_AddsParamLessCtor_WhenNoneExists() =>
         Verifier.Verify(
             ApplyRefactoringAsync(
-                @"
-namespace Foo {
-    class Input { }
-    class Output {
-        [Projectable]
-        public static Output Create(Input i) => new Output { };
-    }
-}",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.AddsParameterlessConstructor,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
     [Fact]
-    public Task ConvertToConstructor_DoesNotAddParameterlessConstructor_WhenAlreadyPresent() =>
+    public Task ConvertToConstructor_DoesNotAddParamLessCtor_WhenAlreadyPresent() =>
         Verifier.Verify(
             ApplyRefactoringAsync(
-                @"
-namespace Foo {
-    class Input { }
-    class Output {
-        public Output() { }
-        [Projectable]
-        public static Output Create(Input i) => new Output { };
-    }
-}",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.ParameterlessConstructorAlreadyPresent,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
@@ -117,20 +76,11 @@ namespace Foo {
     /// must NOT insert one, which would unintentionally widen the public surface area.
     /// </summary>
     [Fact]
-    public Task ConvertToConstructor_DoesNotAddParameterlessConstructor_WhenOtherExplicitCtorExists() =>
+    public Task ConvertToConstructor_DoesNotAddParamLessCtor_WhenOtherExplicitCtorExists() =>
         Verifier.Verify(
             ApplyRefactoringAsync(
-                @"
-namespace Foo {
-    class Input { public int Value { get; set; } }
-    class Output {
-        public int Value { get; set; }
-        public Output(string name) { }
-        [Projectable]
-        public static Output Create(Input i) => new Output { Value = i.Value };
-    }
-}",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.OtherExplicitCtorExists,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
@@ -143,16 +93,8 @@ namespace Foo {
     public Task ConvertToConstructor_InsertedParameterlessCtorIsAlwaysPublic() =>
         Verifier.Verify(
             ApplyRefactoringAsync(
-                @"
-namespace Foo {
-    class Input { }
-    class Output {
-        public int Value { get; set; }
-        [Projectable]
-        internal static Output Create(Input i) => new Output { };
-    }
-}",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.InsertedParameterlessCtorIsAlwaysPublic,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
@@ -170,7 +112,7 @@ namespace Foo {
         public static Output From(Input i) => new Output { Value = i.Value };
     }
 }",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
@@ -188,7 +130,7 @@ namespace Foo {
         public MyObj Create() => new MyObj { };
     }
 }",
-            FirstMethodIdentifierSpan,
+            FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
             _provider);
 
         Assert.Empty(actions);
@@ -206,7 +148,7 @@ namespace Foo {
         public Other Create() => new Other { };
     }
 }",
-            FirstMethodIdentifierSpan,
+            FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
             _provider);
 
         Assert.Empty(actions);
@@ -223,7 +165,7 @@ namespace Foo {
         public MyObj Create(int x) => new MyObj(x) { };
     }
 }",
-            FirstMethodIdentifierSpan,
+            FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
             _provider);
 
         Assert.Empty(actions);
@@ -240,7 +182,7 @@ namespace Foo {
         public MyObj Create() => default;
     }
 }",
-            FirstMethodIdentifierSpan,
+            FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
             _provider);
 
         Assert.Empty(actions);
@@ -257,7 +199,7 @@ namespace Foo {
         public MyObj Create() => new MyObj();
     }
 }",
-            FirstMethodIdentifierSpan,
+            FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
             _provider);
 
         Assert.Empty(actions);
@@ -280,7 +222,7 @@ namespace Foo {
         public static MyObj Create() => new Other.MyObj { };
     }
 }",
-            FirstMethodIdentifierSpan,
+            FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
             _provider);
 
         Assert.Empty(actions);
@@ -302,7 +244,7 @@ namespace Foo {
         public static MyObj Create() => new global::Other.MyObj { };
     }
 }",
-            FirstMethodIdentifierSpan,
+            FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
             _provider);
 
         Assert.Empty(actions);
@@ -316,14 +258,8 @@ namespace Foo {
     public async Task TwoActionsAreOffered_WithCorrectTitles()
     {
         var actions = await GetRefactoringActionsAsync(
-            @"
-namespace Foo {
-    class MyObj {
-        [Projectable]
-        public static MyObj Create() => new MyObj { };
-    }
-}",
-            FirstMethodIdentifierSpan,
+            FactoryMethodToCtorSources.TwoActionsSource,
+            FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
             _provider);
 
         Assert.Equal(2, actions.Count);
@@ -365,7 +301,7 @@ namespace Foo {
         }
     }
 }"),
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 1));
 
@@ -389,7 +325,7 @@ namespace Foo {
         }
     }
 }"),
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 1));
 
@@ -420,7 +356,7 @@ namespace Foo {
         Dest[] Use(IEnumerable<Src> items) => items.Select(Dest.Map).ToArray();
     }
 }"),
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 1));
 
@@ -448,7 +384,7 @@ namespace Foo {
         void Setup() => Register(Dest.Map);
     }
 }"),
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 1));
 
@@ -479,7 +415,7 @@ namespace Foo {
         }
     }
 }"),
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 1));
 
@@ -506,7 +442,7 @@ namespace Foo {
         string GetMethodName() => nameof(Dest.Map);
     }
 }"),
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 1));
 
@@ -538,7 +474,7 @@ namespace Foo {
         };
     }
 }",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
@@ -557,7 +493,7 @@ namespace Foo {
         public static Dest Map(Src src) => new Dest { A = src.A };
     }
 }",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
@@ -571,16 +507,8 @@ namespace Foo {
     public Task ConvertToConstructor_ImplicitObjectCreation() =>
         Verifier.Verify(
             ApplyRefactoringAsync(
-                @"
-namespace Foo {
-    class OtherObj { public string Prop1 { get; set; } }
-    class MyObj {
-        public string Prop1 { get; set; }
-        [Projectable]
-        public static MyObj Create(OtherObj obj) => new() { Prop1 = obj.Prop1 };
-    }
-}",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.ImplicitObjectCreation,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 
@@ -602,7 +530,8 @@ namespace Foo {
         };
     }
 }",
-                FirstMethodIdentifierSpan,
+                FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
                 _provider,
                 actionIndex: 0));
 }
+
