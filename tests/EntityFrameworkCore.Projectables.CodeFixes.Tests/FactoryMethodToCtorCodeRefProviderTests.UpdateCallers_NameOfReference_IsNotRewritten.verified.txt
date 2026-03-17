@@ -1,0 +1,16 @@
+﻿
+namespace Foo {
+    class Src { public int A { get; set; } }
+    class Dest {
+        public Dest() { }
+        public int A { get; set; }
+        [Projectable]
+        public Dest(Src src)
+        {
+            A = src.A;
+        }
+    }
+    class Consumer {
+        string GetMethodName() => nameof(Dest.Map);
+    }
+}

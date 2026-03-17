@@ -91,4 +91,12 @@ static internal class Diagnostics
         category: "Design",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    public readonly static DiagnosticDescriptor FactoryMethodShouldBeConstructor = new DiagnosticDescriptor(
+        id: "EFP0012",
+        title: "[Projectable] factory method can be converted to a constructor",
+        messageFormat: "Factory method '{0}' creates and returns an instance of the containing class via object initializer. Consider converting it to a [Projectable] constructor.",
+        category: "Design",
+        DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
 }

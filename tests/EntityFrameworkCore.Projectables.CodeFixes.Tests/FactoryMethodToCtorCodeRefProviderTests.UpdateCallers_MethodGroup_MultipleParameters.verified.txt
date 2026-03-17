@@ -1,0 +1,19 @@
+﻿
+using System;
+namespace Foo {
+    class Src { public int A { get; set; } }
+    class Dest {
+        public Dest() { }
+        public int A { get; set; }
+        public int Offset { get; set; }
+        [Projectable]
+        public Dest(Src src, int offset)
+        {
+            A = src.A; Offset = offset;
+        }
+    }
+    class Consumer {
+        void Register(Func<Src, int, Dest> factory) { }
+        void Setup() => Register((src, offset) => new Dest(src, offset));
+    }
+}

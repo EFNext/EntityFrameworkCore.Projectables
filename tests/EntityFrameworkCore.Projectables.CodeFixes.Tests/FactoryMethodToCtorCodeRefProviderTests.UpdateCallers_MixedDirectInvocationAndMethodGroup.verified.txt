@@ -1,0 +1,21 @@
+﻿
+using System.Collections.Generic;
+using System.Linq;
+namespace Foo {
+    class Src { public int A { get; set; } }
+    class Dest {
+        public Dest() { }
+        public int A { get; set; }
+        [Projectable]
+        public Dest(Src src)
+        {
+            A = src.A;
+        }
+    }
+    class Consumer {
+        void Setup(IEnumerable<Src> items) {
+            var d = new Dest(new Src { A = 1 });         // direct invocation
+            var all = items.Select(src => new Dest(src)).ToArray();  // method group
+        }
+    }
+}

@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Text;
+using EntityFrameworkCore.Projectables.CodeFixes;
 using EntityFrameworkCore.Projectables.Generator.Comparers;
 using EntityFrameworkCore.Projectables.Generator.Interpretation;
 using EntityFrameworkCore.Projectables.Generator.Models;
@@ -183,6 +184,15 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
         if (projectable.MemberName is null)
         {
             throw new InvalidOperationException("Expected a memberName here");
+        }
+        
+        // Report EFP0012 when a [Projectable] method is a factory that could be a constructor.
+        if (member is MethodDeclarationSyntax factoryCandidate && SyntaxHelpers.TryGetFactoryMethodPattern(factoryCandidate, out _))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                Infrastructure.Diagnostics.FactoryMethodShouldBeConstructor,
+                factoryCandidate.Identifier.GetLocation(),
+                factoryCandidate.Identifier.Text));
         }
 
         var generatedClassName = ProjectionExpressionClassNameGenerator.GenerateName(projectable.ClassNamespace, projectable.NestedInClassNames, projectable.MemberName, projectable.ParameterTypeNames);
