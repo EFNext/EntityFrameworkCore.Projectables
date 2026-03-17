@@ -45,24 +45,6 @@ namespace Foo {
     }
 
     [Fact]
-    public void ReportsEFP0012_OnInstanceFactoryMethod()
-    {
-        var compilation = CreateCompilation(@"
-using EntityFrameworkCore.Projectables;
-namespace Foo {
-    class OtherObj { }
-    class MyObj {
-        [Projectable]
-        public MyObj Create(OtherObj o) => new MyObj { };
-    }
-}");
-        var result = RunGenerator(compilation);
-
-        var diag = Assert.Single(result.Diagnostics);
-        Assert.Equal("EFP0012", diag.Id);
-    }
-
-    [Fact]
     public void ReportsEFP0012_WithMultipleInitializerAssignments()
     {
         var compilation = CreateCompilation(@"

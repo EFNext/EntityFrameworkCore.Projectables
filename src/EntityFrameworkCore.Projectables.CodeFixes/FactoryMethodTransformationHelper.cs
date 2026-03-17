@@ -139,6 +139,13 @@ static internal class FactoryMethodTransformationHelper
                 else
                 {
                     // Method group: Class.Method → p1 => new ReturnType(p1)
+                    // Skip nameof(Class.Method): SymbolFinder returns these locations but
+                    // replacing them with a lambda would produce invalid C#.
+                    if (IsInsideNameOf(methodRefExpr))
+                    {
+                        continue;
+                    }
+
                     if (annotationByMethodGroup.ContainsKey(methodRefExpr))
                     {
                         continue;
@@ -305,6 +312,13 @@ static internal class FactoryMethodTransformationHelper
                 else
                 {
                     // Method group: Class.Method → p => new ReturnType(p)
+                    // Skip nameof(Class.Method): SymbolFinder returns these locations but
+                    // replacing them with a lambda would produce invalid C#.
+                    if (IsInsideNameOf(methodRefExpr))
+                    {
+                        continue;
+                    }
+
                     var lambda = BuildMethodGroupLambda(methodParamNames, returnTypeSyntax)
                         .WithLeadingTrivia(methodRefExpr.GetLeadingTrivia())
                         .WithTrailingTrivia(methodRefExpr.GetTrailingTrivia());
@@ -329,7 +343,7 @@ static internal class FactoryMethodTransformationHelper
         MethodDeclarationSyntax method,
         TypeDeclarationSyntax containingType)
     {
-        var creation = (ObjectCreationExpressionSyntax)method.ExpressionBody!.Expression;
+        var creation = (BaseObjectCreationExpressionSyntax)method.ExpressionBody!.Expression;
         var initializer = creation.Initializer!;
 
         // Only support simple object-initializer assignments (Prop = value). If there are
@@ -341,10 +355,32 @@ static internal class FactoryMethodTransformationHelper
         }
 
         // Convert each object-initializer assignment (Prop = value) to a statement (Prop = value;).
-        var statements = initializer.Expressions
-            .OfType<AssignmentExpressionSyntax>()
-            .Select(a => (StatementSyntax)SyntaxFactory.ExpressionStatement(a))
-            .ToArray();
+        // Two trivia sources must be preserved:
+        //   1. The expression's own trailing trivia (e.g. an inline "// comment") must move onto
+        //      the semicolon token so it stays on the same line as the statement terminator.
+        //   2. The separator comma's trailing trivia (e.g. "\r\n    ") carries the newline and
+        //      indentation that separates adjacent items in the initializer list.  That trivia
+        //      is lost when we extract only the expressions, so we append it to the semicolon as
+        //      well so the next statement starts on its own correctly-indented line.
+        static StatementSyntax ToStatement(AssignmentExpressionSyntax a, SyntaxTriviaList separatorTrailing)
+        {
+            var exprTrailing = a.GetTrailingTrivia();
+            var semicolonTrailing = exprTrailing.AddRange(separatorTrailing);
+            return SyntaxFactory.ExpressionStatement(
+                a.WithoutTrailingTrivia(),
+                SyntaxFactory.Token(SyntaxKind.SemicolonToken).WithTrailingTrivia(semicolonTrailing));
+        }
+
+        var exprs = initializer.Expressions;
+        var statements = new StatementSyntax[exprs.Count];
+        for (var i = 0; i < exprs.Count; i++)
+        {
+            var a = (AssignmentExpressionSyntax)exprs[i];
+            var sepTrivia = i < exprs.SeparatorCount
+                ? exprs.GetSeparator(i).TrailingTrivia
+                : default;
+            statements[i] = ToStatement(a, sepTrivia);
+        }
 
         var ctorModifiers = GetConstructorModifiers(method);
 
@@ -361,17 +397,24 @@ static internal class FactoryMethodTransformationHelper
         var newMembers = containingType.Members.RemoveAt(methodIndex);
         newMembers = newMembers.Insert(Math.Min(methodIndex, newMembers.Count), ctor);
 
-        // Add an explicit parameterless constructor if the class has none, to avoid breaking
-        // code that relied on the implicit default constructor.
-        var hasParamlessCtor = containingType.Members
-            .OfType<ConstructorDeclarationSyntax>()
-            .Any(c => c.ParameterList.Parameters.Count == 0);
+        // Add an explicit parameterless constructor only when the class originally had NO
+        // explicit constructors at all.  The C# compiler emits an implicit parameterless
+        // constructor solely in that case (C# spec §10.11.4), and it is always declared public.
+        // If the class already had other user-declared constructors the implicit default was
+        // already suppressed, so we must not introduce a new public overload.
+        var existingCtors = containingType.Members.OfType<ConstructorDeclarationSyntax>().ToArray();
+        var hasParamlessCtor = existingCtors.Any(c => c.ParameterList.Parameters.Count == 0);
+        var hadNoExplicitCtors = existingCtors.Length == 0;
 
-        if (!hasParamlessCtor)
+        if (!hasParamlessCtor && hadNoExplicitCtors)
         {
+            // The implicit default ctor is always public (C# spec §10.11.4) regardless of the
+            // factory method's own accessibility, so hard-code public here.
             var paramlessCtor = SyntaxFactory
                 .ConstructorDeclaration(containingType.Identifier.WithoutTrivia())
-                .WithModifiers(ctorModifiers)
+                .WithModifiers(SyntaxFactory.TokenList(
+                    SyntaxFactory.Token(SyntaxKind.PublicKeyword)
+                        .WithTrailingTrivia(SyntaxFactory.Space)))
                 .WithParameterList(SyntaxFactory.ParameterList())
                 .WithBody(SyntaxFactory.Block())
                 .WithAdditionalAnnotations(Formatter.Annotation)
@@ -396,6 +439,29 @@ static internal class FactoryMethodTransformationHelper
 
         return SyntaxFactory.TokenList(filteredModifiers);
     }
+
+    /// <summary>
+    /// Returns <see langword="true"/> when <paramref name="expr"/> is the argument of a
+    /// <c>nameof(…)</c> expression.
+    /// <para>
+    /// Roslyn parses <c>nameof(X.Y)</c> as an <see cref="InvocationExpressionSyntax"/> whose
+    /// callee is an <see cref="IdentifierNameSyntax"/> with the text <c>nameof</c>.
+    /// <see cref="Microsoft.CodeAnalysis.FindSymbols.SymbolFinder"/> still returns such
+    /// locations, but replacing them with a lambda or object-creation expression would produce
+    /// invalid C# — they must be skipped.
+    /// </para>
+    /// </summary>
+    private static bool IsInsideNameOf(ExpressionSyntax expr) =>
+        expr.Parent is ArgumentSyntax
+        {
+            Parent: ArgumentListSyntax
+            {
+                Parent: InvocationExpressionSyntax
+                {
+                    Expression: IdentifierNameSyntax { Identifier.Text: "nameof" }
+                }
+            }
+        };
 
     /// <summary>
     /// Builds a lambda expression that wraps a constructor call, for use when a factory

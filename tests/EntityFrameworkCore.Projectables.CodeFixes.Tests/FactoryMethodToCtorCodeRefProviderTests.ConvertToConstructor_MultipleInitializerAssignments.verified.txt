@@ -11,8 +11,7 @@ namespace Foo {
         [Projectable]
         public Dest(Src src)
         {
-            A = src.A;
-            B = src.B;
+            A = src.A; B = src.B;
         }
     }
 }

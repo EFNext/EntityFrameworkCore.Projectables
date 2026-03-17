@@ -13,8 +13,7 @@ namespace Foo {
         {
             // primary field
             A = src.A;
-            B = src.B // secondary field
-;
+            B = src.B; // secondary field
         }
     }
 }

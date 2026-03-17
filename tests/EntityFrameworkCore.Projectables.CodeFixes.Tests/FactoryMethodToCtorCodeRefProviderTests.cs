@@ -111,6 +111,51 @@ namespace Foo {
                 _provider,
                 actionIndex: 0));
 
+    /// <summary>
+    /// When the class already has at least one explicit constructor (but no parameterless one),
+    /// the C# compiler did NOT generate an implicit default constructor — so the transformation
+    /// must NOT insert one, which would unintentionally widen the public surface area.
+    /// </summary>
+    [Fact]
+    public Task ConvertToConstructor_DoesNotAddParameterlessConstructor_WhenOtherExplicitCtorExists() =>
+        Verifier.Verify(
+            ApplyRefactoringAsync(
+                @"
+namespace Foo {
+    class Input { public int Value { get; set; } }
+    class Output {
+        public int Value { get; set; }
+        public Output(string name) { }
+        [Projectable]
+        public static Output Create(Input i) => new Output { Value = i.Value };
+    }
+}",
+                FirstMethodIdentifierSpan,
+                _provider,
+                actionIndex: 0));
+
+    /// <summary>
+    /// The implicit default constructor is always public (C# spec §10.11.4) regardless of the
+    /// factory method's accessibility.  The inserted explicit parameterless ctor must therefore
+    /// be public too, even when the factory method is internal or protected.
+    /// </summary>
+    [Fact]
+    public Task ConvertToConstructor_InsertedParameterlessCtorIsAlwaysPublic() =>
+        Verifier.Verify(
+            ApplyRefactoringAsync(
+                @"
+namespace Foo {
+    class Input { }
+    class Output {
+        public int Value { get; set; }
+        [Projectable]
+        internal static Output Create(Input i) => new Output { };
+    }
+}",
+                FirstMethodIdentifierSpan,
+                _provider,
+                actionIndex: 0));
+
     [Fact]
     public Task ConvertToConstructor_WithExistingMembers_PreservesMemberOrder() =>
         Verifier.Verify(
@@ -210,6 +255,51 @@ namespace Foo {
     class MyObj {
         [Projectable]
         public MyObj Create() => new MyObj();
+    }
+}",
+            FirstMethodIdentifierSpan,
+            _provider);
+
+        Assert.Empty(actions);
+    }
+
+    /// <summary>
+    /// Regression: <c>new Other.MyObj { }</c> has a qualified type name that cannot be
+    /// confirmed as the containing type without a semantic model.  The pattern must reject
+    /// it to avoid a false-positive transformation that would corrupt the class.
+    /// </summary>
+    [Fact]
+    public async Task NoRefactoring_WhenCreatedTypeIsQualifiedName()
+    {
+        var actions = await GetRefactoringActionsAsync(
+            @"
+namespace Other { class MyObj { } }
+namespace Foo {
+    class MyObj {
+        [Projectable]
+        public static MyObj Create() => new Other.MyObj { };
+    }
+}",
+            FirstMethodIdentifierSpan,
+            _provider);
+
+        Assert.Empty(actions);
+    }
+
+    /// <summary>
+    /// Regression: <c>new global::Other.MyObj { }</c> uses an alias-qualified name that
+    /// cannot be confirmed as the containing type without a semantic model.
+    /// </summary>
+    [Fact]
+    public async Task NoRefactoring_WhenCreatedTypeIsAliasQualifiedName()
+    {
+        var actions = await GetRefactoringActionsAsync(
+            @"
+namespace Other { class MyObj { } }
+namespace Foo {
+    class MyObj {
+        [Projectable]
+        public static MyObj Create() => new global::Other.MyObj { };
     }
 }",
             FirstMethodIdentifierSpan,
@@ -393,6 +483,33 @@ namespace Foo {
                 _provider,
                 actionIndex: 1));
 
+    /// <summary>
+    /// <c>nameof(Dest.Map)</c> is returned by <c>SymbolFinder.FindReferencesAsync</c> as a
+    /// reference location. It must NOT be rewritten to a lambda — it should be left unchanged
+    /// (producing a compile-time error that the user can fix manually), rather than generating
+    /// invalid C# like <c>p => new Dest(p)</c> inside a <c>nameof</c> argument.
+    /// </summary>
+    [Fact]
+    public Task UpdateCallers_NameOfReference_IsNotRewritten() =>
+        Verifier.Verify(
+            ApplyRefactoringAsync(
+                CreateDocumentWithReferences(@"
+namespace Foo {
+    class Src { public int A { get; set; } }
+    class Dest {
+        public Dest() { }
+        public int A { get; set; }
+        [Projectable]
+        public static Dest Map(Src src) => new Dest { A = src.A };
+    }
+    class Consumer {
+        string GetMethodName() => nameof(Dest.Map);
+    }
+}"),
+                FirstMethodIdentifierSpan,
+                _provider,
+                actionIndex: 1));
+
     // ────────────────────────────────────────────────────────────────────────────
     // Complex initializer expressions and trivia preservation (action 0)
     // ────────────────────────────────────────────────────────────────────────────
@@ -438,6 +555,29 @@ namespace Foo {
         /// <param name=""src"">The source object.</param>
         [Projectable]
         public static Dest Map(Src src) => new Dest { A = src.A };
+    }
+}",
+                FirstMethodIdentifierSpan,
+                _provider,
+                actionIndex: 0));
+
+    /// <summary>
+    /// Regression test: implicit object creation (<c>new() { … }</c>) must not throw
+    /// an <see cref="InvalidCastException"/> — <see cref="FactoryMethodTransformationHelper"/>
+    /// must treat it as <see cref="Microsoft.CodeAnalysis.CSharp.Syntax.BaseObjectCreationExpressionSyntax"/>
+    /// rather than casting to the explicit <c>ObjectCreationExpressionSyntax</c>.
+    /// </summary>
+    [Fact]
+    public Task ConvertToConstructor_ImplicitObjectCreation() =>
+        Verifier.Verify(
+            ApplyRefactoringAsync(
+                @"
+namespace Foo {
+    class OtherObj { public string Prop1 { get; set; } }
+    class MyObj {
+        public string Prop1 { get; set; }
+        [Projectable]
+        public static MyObj Create(OtherObj obj) => new() { Prop1 = obj.Prop1 };
     }
 }",
                 FirstMethodIdentifierSpan,

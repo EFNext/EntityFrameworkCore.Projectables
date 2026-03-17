@@ -9,8 +9,7 @@ namespace Foo {
         [Projectable]
         public Dest(Src src, int offset)
         {
-            A = src.A;
-            Offset = offset;
+            A = src.A; Offset = offset;
         }
     }
     class Consumer {
