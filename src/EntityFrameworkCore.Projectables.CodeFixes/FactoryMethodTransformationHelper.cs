@@ -347,9 +347,11 @@ static internal class FactoryMethodTransformationHelper
         var initializer = creation.Initializer!;
 
         // Only support simple object-initializer assignments (Prop = value). If there are
-        // other initializer forms (e.g., collection initializers), bail out to avoid
+        // other initializer forms (e.g., collection initializers) or assignments whose RHS
+        // is a nested initializer (e.g. Items = { 1, 2 }), bail out to avoid
         // producing a constructor that does not preserve behavior.
-        if (initializer.Expressions.Any(e => e is not AssignmentExpressionSyntax))
+        if (initializer.Expressions.Any(
+            e => e is not AssignmentExpressionSyntax { Right: not InitializerExpressionSyntax }))
         {
             return root;
         }

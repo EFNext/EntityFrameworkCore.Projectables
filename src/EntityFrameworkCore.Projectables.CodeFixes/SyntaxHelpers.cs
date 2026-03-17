@@ -54,6 +54,17 @@ static internal class SyntaxHelpers
             return false;
         }
 
+        // Only pure simple-assignment initializers (Prop = value) — no bare collection
+        // elements (which are not AssignmentExpressionSyntax) and no nested initializer
+        // assignments (Items = { 1, 2 }) whose RHS is an InitializerExpressionSyntax.
+        // Converting such entries to statements would produce invalid C#, so we must not
+        // offer the refactoring at all for these patterns.
+        if (creation.Initializer.Expressions.Any(
+            e => e is not AssignmentExpressionSyntax { Right: not InitializerExpressionSyntax }))
+        {
+            return false;
+        }
+
         // Only allow static factory methods, to keep the code fix simpler
         if (!method.Modifiers.Any(m => m.IsKind(SyntaxKind.StaticKeyword)))
         {

@@ -130,4 +130,56 @@ namespace Foo {
 
         Assert.Empty(actions);
     }
+
+    /// <summary>
+    /// <c>Items = { 1, 2 }</c> in an object initializer is an
+    /// <see cref="Microsoft.CodeAnalysis.CSharp.Syntax.AssignmentExpressionSyntax"/>
+    /// whose RHS is an <see cref="Microsoft.CodeAnalysis.CSharp.Syntax.InitializerExpressionSyntax"/>.
+    /// Converting it to a statement produces invalid C# (<c>Items = { 1, 2 };</c>),
+    /// so the code fix must not be offered for this pattern.
+    /// </summary>
+    [Fact]
+    public async Task NoCodeFix_WhenInitializerHasNestedCollectionInitializer()
+    {
+        var actions = await GetCodeFixActionsAsync(
+            @"
+using System.Collections.Generic;
+namespace Foo {
+    class MyObj {
+        public List<int> Items { get; set; }
+        [Projectable]
+        public static MyObj Create() => new MyObj { Items = { 1, 2 } };
+    }
+}",
+            "EFP0012",
+            FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
+            _provider);
+
+        Assert.Empty(actions);
+    }
+
+    /// <summary>
+    /// A mixed initializer that combines a simple assignment with a nested collection
+    /// initializer (<c>Items = { 1, 2 }</c>) must also be rejected.
+    /// </summary>
+    [Fact]
+    public async Task NoCodeFix_WhenMixedSimpleAndNestedCollectionInitializer()
+    {
+        var actions = await GetCodeFixActionsAsync(
+            @"
+using System.Collections.Generic;
+namespace Foo {
+    class MyObj {
+        public int Value { get; set; }
+        public List<int> Items { get; set; }
+        [Projectable]
+        public static MyObj Create(int v) => new MyObj { Value = v, Items = { 1, 2 } };
+    }
+}",
+            "EFP0012",
+            FactoryMethodToCtorSources.FirstMethodIdentifierSpan,
+            _provider);
+
+        Assert.Empty(actions);
+    }
 }
