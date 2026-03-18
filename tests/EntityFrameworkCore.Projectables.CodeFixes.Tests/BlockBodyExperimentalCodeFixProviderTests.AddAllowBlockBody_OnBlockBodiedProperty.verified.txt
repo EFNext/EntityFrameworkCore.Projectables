@@ -1,0 +1,10 @@
+﻿
+namespace Foo {
+    class C {
+        [Projectable(AllowBlockBody = true)]
+        public int Double
+        {
+            get { return 2; }
+        }
+    }
+}

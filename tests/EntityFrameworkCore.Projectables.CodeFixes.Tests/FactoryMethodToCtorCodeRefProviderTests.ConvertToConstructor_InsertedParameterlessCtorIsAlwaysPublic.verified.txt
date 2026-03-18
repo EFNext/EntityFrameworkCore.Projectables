@@ -1,0 +1,15 @@
+﻿
+namespace Foo {
+    class Input { }
+    class Output {
+        public Output()
+        {
+        }
+
+        public int Value { get; set; }
+        [Projectable]
+        internal Output(Input i)
+        {
+        }
+    }
+}

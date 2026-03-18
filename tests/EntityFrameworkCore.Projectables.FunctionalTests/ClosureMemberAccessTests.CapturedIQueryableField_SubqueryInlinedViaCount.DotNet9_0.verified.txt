@@ -1,0 +1,5 @@
+﻿SELECT [e].[Id], (
+    SELECT COUNT(*)
+    FROM [Entity] AS [e0]
+    WHERE [e0].[Id] * 2 > 4) AS [SubsetCount]
+FROM [Entity] AS [e]

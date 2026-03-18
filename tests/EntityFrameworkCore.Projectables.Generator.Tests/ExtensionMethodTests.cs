@@ -106,4 +106,34 @@ namespace Foo {
 
         return Verifier.Verify(result.GeneratedTrees[0].ToString());
     }
+
+    [Fact]
+    public Task ProjectableExtensionMethod_WithExpressionPropertyBody()
+    {
+        var compilation = CreateCompilation(@"
+using System;
+using System.Linq;
+using System.Linq.Expressions;
+using EntityFrameworkCore.Projectables;
+namespace Foo {
+    class D {
+        public string Name { get; set; }
+    }
+    
+    static class C {
+        [Projectable(UseMemberBody = nameof(NameEqualsExpr))]
+        public static bool NameEquals(this D a, D b) => a.Name == b.Name;
+
+        private static Expression<Func<D, D, bool>> NameEqualsExpr => (a, b) => a.Name == b.Name;
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
 }

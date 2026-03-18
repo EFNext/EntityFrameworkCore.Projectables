@@ -1,0 +1,8 @@
+﻿DECLARE @minCount int = 1;
+
+SELECT [e].[Id], [e].[Name]
+FROM [Entity] AS [e]
+WHERE ([e].[Id] >= @minCount AND [e].[Id] <= 50) OR EXISTS (
+    SELECT 1
+    FROM [Entity] AS [e0]
+    WHERE [e0].[Id] >= 10 AND [e0].[Id] <= 100 AND [e0].[Id] = [e].[Id])

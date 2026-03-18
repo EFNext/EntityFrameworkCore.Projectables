@@ -60,7 +60,7 @@ namespace EntityFrameworkCore.Projectables.Tests.Extensions
 
             var result = subject.GetNestedTypePath();
 
-            Assert.Equal(2, result.Count());
+            Assert.Equal(2, result.Length);
         }
 
         [Fact]
@@ -70,7 +70,7 @@ namespace EntityFrameworkCore.Projectables.Tests.Extensions
 
             var result = subject.GetNestedTypePath();
 
-            Assert.Equal(3, result.Count());
+            Assert.Equal(3, result.Length);
         }
 
         [Fact]

@@ -9,8 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-	<Compile Include="..\EntityFrameworkCore.Projectables.Abstractions\NullConditionalRewriteSupport.cs" Link="NullConditionalRewriteSupport.cs" />
-	<Compile Include="..\EntityFrameworkCore.Projectables\Services\ProjectionExpressionClassNameGenerator.cs" Link="ProjectionExpressionClassNameGenerator.cs" />
+	<Compile Include="..\EntityFrameworkCore.Projectables.Abstractions\NullConditionalRewriteSupport.cs" Link="Infrastructure\NullConditionalRewriteSupport.cs" />
+	<Compile Include="..\EntityFrameworkCore.Projectables\Services\ProjectionExpressionClassNameGenerator.cs" Link="Infrastructure\ProjectionExpressionClassNameGenerator.cs" />
+	<Compile Include="..\EntityFrameworkCore.Projectables.CodeFixes\SyntaxHelpers.cs" Link="Infrastructure\SyntaxHelpers.cs" />
   </ItemGroup>
 
   <ItemGroup>

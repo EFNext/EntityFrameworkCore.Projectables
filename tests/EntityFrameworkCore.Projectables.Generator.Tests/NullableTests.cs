@@ -489,4 +489,88 @@ class Foo {
 
         return Verifier.Verify(result.GeneratedTrees[0].ToString());
     }
+
+    [Fact]
+    public Task NullableValueType_MemberAccess_WithRewriteSupport_IsBeingRewritten()
+    {
+        var compilation = CreateCompilation(@"
+using System;
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    public struct Point {
+        public double X { get; set; }
+        public double Y { get; set; }
+    }
+
+    static class C {
+        [Projectable(NullConditionalRewriteSupport = NullConditionalRewriteSupport.Rewrite)]
+        public static double? GetX(this Point? point) => point?.X;
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
+
+    [Fact]
+    public Task NullableValueType_MemberAccess_WithIgnoreSupport_IsBeingRewritten()
+    {
+        var compilation = CreateCompilation(@"
+using System;
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    public struct Point {
+        public double X { get; set; }
+        public double Y { get; set; }
+    }
+
+    static class C {
+        [Projectable(NullConditionalRewriteSupport = NullConditionalRewriteSupport.Ignore)]
+        public static double? GetX(this Point? point) => point?.X;
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
+
+    [Fact]
+    public Task NullableValueType_MemberAccessWithCoalesce_WithRewriteSupport_IsBeingRewritten()
+    {
+        var compilation = CreateCompilation(@"
+using System;
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    public struct Point {
+        public double X { get; set; }
+        public double Y { get; set; }
+    }
+
+    static class C {
+        [Projectable(NullConditionalRewriteSupport = NullConditionalRewriteSupport.Rewrite)]
+        public static double GetX(this Point? point) => point?.X ?? 0.0;
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
 }

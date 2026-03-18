@@ -1,0 +1,9 @@
+﻿
+namespace Foo {
+    class C {
+        public string Name { get; set; }
+
+        [Projectable(NullConditionalRewriteSupport = NullConditionalRewriteSupport.Ignore)]
+        public int NameLength() => Name?.Length ?? 0;
+    }
+}

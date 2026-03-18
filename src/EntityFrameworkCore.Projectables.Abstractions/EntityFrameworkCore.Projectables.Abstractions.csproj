@@ -11,11 +11,17 @@
 	  <OutputItemType>Content</OutputItemType>
 	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	</ProjectReference>
+	<ProjectReference Include="..\EntityFrameworkCore.Projectables.CodeFixes\EntityFrameworkCore.Projectables.CodeFixes.csproj" Pack="false">
+	  <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+	  <OutputItemType>Content</OutputItemType>
+	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	</ProjectReference>
   </ItemGroup>
 
   <ItemGroup>
-	<!-- Package the generator in the analyzer directory of the nuget package -->
+	<!-- Package the generator and the code fix provider in the analyzer directory of the nuget package -->
     <None Include="..\EntityFrameworkCore.Projectables.Generator\bin\$(Configuration)\netstandard2.0\EntityFrameworkCore.Projectables.Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="..\EntityFrameworkCore.Projectables.CodeFixes\bin\$(Configuration)\netstandard2.0\EntityFrameworkCore.Projectables.CodeFixes.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>

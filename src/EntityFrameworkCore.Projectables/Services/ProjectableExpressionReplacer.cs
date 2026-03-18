@@ -21,27 +21,27 @@ namespace EntityFrameworkCore.Projectables.Services
         private readonly bool _trackingByDefault;
         private IEntityType? _entityType;
 
-        private readonly MethodInfo _select;
-        private readonly MethodInfo _where;
+        // Extract MethodInfo via expression trees (trim-safe; computed once per AppDomain)
+        private readonly static MethodInfo _select =
+            ((MethodCallExpression)((Expression<Func<IQueryable<object>, IQueryable<object>>>)
+                (q => q.Select(x => x))).Body).Method.GetGenericMethodDefinition();
+
+        private readonly static MethodInfo _where =
+            ((MethodCallExpression)((Expression<Func<IQueryable<object>, IQueryable<object>>>)
+                (q => q.Where(x => true))).Body).Method.GetGenericMethodDefinition();
+
+        // Static caches — keyed by CLR type, shared across all instances for the AppDomain lifetime.
+        // ConditionalWeakTable uses "ephemeron" semantics: the Type key is not kept alive by the
+        // cache entry, so types from collectible AssemblyLoadContexts can still be unloaded.
+        private readonly static ConditionalWeakTable<Type, StrongBox<bool>> _compilerGeneratedClosureCache = new();
+        private readonly static ConditionalWeakTable<Type, PropertyInfo[]> _projectablePropertiesCache = new();
+        private readonly static ConditionalWeakTable<Type, MethodInfo> _closedSelectCache = new();
+        private readonly static ConditionalWeakTable<Type, MethodInfo> _closedWhereCache = new();
 
         public ProjectableExpressionReplacer(IProjectionExpressionResolver projectionExpressionResolver, bool trackByDefault = false)
         {
             _trackingByDefault = trackByDefault;
             _resolver = projectionExpressionResolver;
-            _select = typeof(Queryable).GetMethods(BindingFlags.Static | BindingFlags.Public)
-                .Where(x => x.Name == nameof(Queryable.Select))
-                .First(x =>
-                        x.GetParameters().Last().ParameterType // Expression<Func<T, Ret>>
-                            .GetGenericArguments().First() // Func<T, Ret>
-                            .GetGenericArguments().Length == 2 // Separate between Func<T, Ret> and Func<T, int, Ret>
-                );
-            _where = typeof(Queryable).GetMethods(BindingFlags.Static | BindingFlags.Public)
-                .Where(x => x.Name == nameof(Queryable.Where))
-                .First(x =>
-                        x.GetParameters().Last().ParameterType // Expression<Func<T, Ret>>
-                            .GetGenericArguments().First() // Func<T, Ret>
-                            .GetGenericArguments().Length == 2 // Separate between Func<T, Ret> and Func<T, int, Ret>
-                );
         }
 
         bool TryGetReflectedExpression(MemberInfo memberInfo, [NotNullWhen(true)] out LambdaExpression? reflectedExpression)
@@ -51,7 +51,7 @@ namespace EntityFrameworkCore.Projectables.Services
                 var projectableAttribute = memberInfo.GetCustomAttribute<ProjectableAttribute>(false);
 
                 reflectedExpression = projectableAttribute is not null
-                    ? _resolver.FindGeneratedExpression(memberInfo)
+                    ? _resolver.FindGeneratedExpression(memberInfo, projectableAttribute)
                     : null;
 
                 _projectableMemberCache.Add(memberInfo, reflectedExpression);
@@ -92,7 +92,6 @@ namespace EntityFrameworkCore.Projectables.Services
                     //     // case of a first()
                     //     return obj.MyMap(x => new Obj {});
                     // }
-
                     
                     if (call.Method.ReturnType.IsAssignableTo(typeof(IQueryable)))
                     {
@@ -109,7 +108,8 @@ namespace EntityFrameworkCore.Projectables.Services
                             // before the query become executed by EF (before the .First()), we rewrite the .First(where)
                             // as .Where(where).Select(x => ...).First()
             
-                            var where = Expression.Call(null, _where.MakeGenericMethod(_entityType.ClrType), call.Arguments);
+                            var whereMethod = _closedWhereCache.GetValue(_entityType.ClrType, t => _where.MakeGenericMethod(t));
+                            var where = Expression.Call(null, whereMethod, call.Arguments);
                             // The call instance is based on the wrong polymorphied method.
                             var first  = call.Method.DeclaringType?.GetMethods()
                                 .FirstOrDefault(x => x.Name == call.Method.Name && x.GetParameters().Length == 1);
@@ -146,18 +146,27 @@ namespace EntityFrameworkCore.Projectables.Services
         protected override Expression VisitMethodCall(MethodCallExpression node)
         {
             // Replace MethodGroup arguments with their reflected expressions.
-            // Note that MethodCallExpression.Update returns the original Expression if argument values have not changed.
-            node = node.Update(node.Object, node.Arguments.Select(arg => arg switch {
-                UnaryExpression {
-                    NodeType: ExpressionType.Convert,
-                    Operand: MethodCallExpression {
-                        NodeType: ExpressionType.Call,
-                        Method: { Name: nameof(MethodInfo.CreateDelegate), DeclaringType.Name: nameof(MethodInfo) },
-                        Object: ConstantExpression { Value: MethodInfo methodInfo }
-                    }
-                } => TryGetReflectedExpression(methodInfo, out var expressionArg) ? expressionArg : arg,
-                _ => arg
-            }));
+            // No-alloc fast-path: scan args without allocating; only copy the array and call
+            // Update() when a replacement is actually found (method-group arguments are rare).
+            Expression[]? updatedArgs = null;
+            for (var i = 0; i < node.Arguments.Count; i++)
+            {
+                if (node.Arguments[i] is UnaryExpression {
+                        NodeType: ExpressionType.Convert,
+                        Operand: MethodCallExpression {
+                            NodeType: ExpressionType.Call,
+                            Method: { Name: nameof(MethodInfo.CreateDelegate), DeclaringType.Name: nameof(MethodInfo) },
+                            Object: ConstantExpression { Value: MethodInfo capturedMethodInfo }
+                        }
+                    } && TryGetReflectedExpression(capturedMethodInfo, out var expressionArg))
+                {
+                    (updatedArgs ??= [.. node.Arguments])[i] = expressionArg;
+                }
+            }
+            if (updatedArgs is not null)
+            {
+                node = node.Update(node.Object, updatedArgs);
+            }
 
             // Get the overriding methodInfo based on te type of the received of this expression
             var methodInfo = node.Object?.Type.GetConcreteMethod(node.Method) ?? node.Method;
@@ -180,7 +189,7 @@ namespace EntityFrameworkCore.Projectables.Services
             {
                 for (var parameterIndex = 0; parameterIndex < reflectedExpression.Parameters.Count; parameterIndex++)
                 {
-                    var parameterExpession = reflectedExpression.Parameters[parameterIndex];
+                    var parameterExpression = reflectedExpression.Parameters[parameterIndex];
                     var mappedArgumentExpression = (parameterIndex, node.Object) switch {
                         (0, not null) => node.Object,
                         (_, not null) => node.Arguments[parameterIndex - 1],
@@ -189,7 +198,7 @@ namespace EntityFrameworkCore.Projectables.Services
 
                     if (mappedArgumentExpression is not null)
                     {
-                        _expressionArgumentReplacer.ParameterArgumentMapping.Add(parameterExpession, mappedArgumentExpression);
+                        _expressionArgumentReplacer.ParameterArgumentMapping.Add(parameterExpression, mappedArgumentExpression);
                     }
                 }
 
@@ -240,19 +249,35 @@ namespace EntityFrameworkCore.Projectables.Services
         {
             // Evaluate captured variables in closures that contain EF queries to inline them into the main query
             if (node.Expression is ConstantExpression constant &&
-                constant.Type.Attributes.HasFlag(TypeAttributes.NestedPrivate) &&
-                Attribute.IsDefined(constant.Type, typeof(CompilerGeneratedAttribute), inherit: true))
+                IsCompilerGeneratedClosure(constant.Type))
             {
                 try
                 {
-                    var value = Expression
-                        .Lambda<Func<object>>(Expression.Convert(node, typeof(object)))
-                        .Compile()
-                        .Invoke();
+                    // Cheap type check first: only call GetValue() when the declared type
+                    // could possibly hold an IQueryable at runtime.  We use IEnumerable as
+                    // the gate (rather than IQueryable) because a variable legitimately
+                    // declared as IEnumerable<T> may hold an EF Core IQueryable<T> at
+                    // runtime — both interfaces share the same assignability chain.
+                    // FieldType / PropertyType are free property reads on already-
+                    // materialised MemberInfo objects, so this check is cheap.
+                    var memberType = node.Member switch {
+                        FieldInfo field => field.FieldType,
+                        PropertyInfo prop => prop.PropertyType,
+                        _ => null
+                    };
 
-                    if (value is IQueryable queryable && ReferenceEquals(queryable.Provider, _currentQueryProvider))
+                    if (memberType is not null && typeof(IEnumerable).IsAssignableFrom(memberType))
                     {
-                        return Visit(queryable.Expression);
+                        var value = node.Member switch {
+                            FieldInfo field => field.GetValue(constant.Value),
+                            PropertyInfo prop => prop.GetValue(constant.Value),
+                            _ => null
+                        };
+
+                        if (value is IQueryable queryable && ReferenceEquals(queryable.Provider, _currentQueryProvider))
+                        {
+                            return Visit(queryable.Expression);
+                        }
                     }
                 }
                 catch
@@ -283,16 +308,10 @@ namespace EntityFrameworkCore.Projectables.Services
                     var updatedBody = _expressionArgumentReplacer.Visit(reflectedExpression.Body);
                     _expressionArgumentReplacer.ParameterArgumentMapping.Clear();
 
-                    return base.Visit(
-                        updatedBody
-                    );
+                    return base.Visit(updatedBody);
                 }
-                else
-                {
-                    return base.Visit(
-                        reflectedExpression.Body
-                    );
-                }
+
+                return base.Visit(reflectedExpression.Body);
             }
 
             return base.VisitMember(node);
@@ -311,12 +330,13 @@ namespace EntityFrameworkCore.Projectables.Services
 
         private Expression _AddProjectableSelect(Expression node, IEntityType entityType)
         {
-            var projectableProperties = entityType.ClrType.GetProperties()
-                .Where(x => x.IsDefined(typeof(ProjectableAttribute), false))
-                .Where(x => x.CanWrite)
-                .ToList();
+            var projectableProperties = _projectablePropertiesCache.GetValue(
+                entityType.ClrType,
+                static t => t.GetProperties()
+                    .Where(x => x.IsDefined(typeof(ProjectableAttribute), false) && x.CanWrite)
+                    .ToArray());
 
-            if (!projectableProperties.Any())
+            if (projectableProperties.Length == 0)
             {
                 return node;
             }
@@ -335,7 +355,7 @@ namespace EntityFrameworkCore.Projectables.Services
                 .Where(x => projectableProperties.All(y => x.Name != y.Name && x.Name != $"<{y.Name}>k__BackingField"));
 
             // Replace db.Entities to db.Entities.Select(x => new Entity { Property1 = x.Property1, Rewritted = rewrittedProperty })
-            var select = _select.MakeGenericMethod(entityType.ClrType, entityType.ClrType);
+            var select = _closedSelectCache.GetValue(entityType.ClrType, t => _select.MakeGenericMethod(t, t));
             var xParam = Expression.Parameter(entityType.ClrType);
             return Expression.Call(
                 null,
@@ -362,5 +382,12 @@ namespace EntityFrameworkCore.Projectables.Services
             _expressionArgumentReplacer.ParameterArgumentMapping.Clear();
             return base.Visit(updatedBody);
         }
+
+        private static bool IsCompilerGeneratedClosure(Type type) =>
+            // TypeAttributes.NestedPrivate is a cheap flag check that rules out most types before
+            // touching the attribute cache.
+            type.Attributes.HasFlag(TypeAttributes.NestedPrivate) &&
+            _compilerGeneratedClosureCache.GetValue(type, static t =>
+                new StrongBox<bool>(Attribute.IsDefined(t, typeof(CompilerGeneratedAttribute), inherit: true))).Value;
     }
 }

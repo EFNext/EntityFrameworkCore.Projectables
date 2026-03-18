@@ -1,0 +1,7 @@
+﻿
+namespace Foo {
+    class C {
+        [Projectable(AllowBlockBody = true)]
+        public int Bar() { return 42; }
+    }
+}

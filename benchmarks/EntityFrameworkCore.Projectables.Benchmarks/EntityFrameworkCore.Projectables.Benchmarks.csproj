@@ -7,11 +7,14 @@
 
   <ItemGroup>
 	<PackageReference Include="BenchmarkDotNet" />
+	<PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
 	<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+	<PackageReference Include="Basic.Reference.Assemblies.Net80"  Condition="'$(TargetFramework)' == 'net8.0'" />
+	<PackageReference Include="Basic.Reference.Assemblies.Net100" Condition="'$(TargetFramework)' == 'net10.0'" />
   </ItemGroup>
 
   <ItemGroup>
-	<ProjectReference Include="..\..\src\EntityFrameworkCore.Projectables.Generator\EntityFrameworkCore.Projectables.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+	<ProjectReference Include="..\..\src\EntityFrameworkCore.Projectables.Generator\EntityFrameworkCore.Projectables.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
 	<ProjectReference Include="..\..\src\EntityFrameworkCore.Projectables\EntityFrameworkCore.Projectables.csproj" />
   </ItemGroup>
 

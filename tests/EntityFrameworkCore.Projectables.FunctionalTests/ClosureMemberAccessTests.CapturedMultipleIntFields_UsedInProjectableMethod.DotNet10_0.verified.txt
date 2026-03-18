@@ -1,0 +1,6 @@
+﻿DECLARE @lower int = 2;
+DECLARE @upper int = 8;
+
+SELECT [e].[Id], [e].[Name]
+FROM [Entity] AS [e]
+WHERE [e].[Id] >= @lower AND [e].[Id] <= @upper

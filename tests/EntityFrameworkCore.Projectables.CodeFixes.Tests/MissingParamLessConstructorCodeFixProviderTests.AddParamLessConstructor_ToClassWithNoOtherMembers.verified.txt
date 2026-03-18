@@ -1,0 +1,11 @@
+﻿
+namespace Foo {
+    class Empty {
+        public Empty()
+        {
+        }
+
+        [Projectable]
+        public Empty(int value) { }
+    }
+}

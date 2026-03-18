@@ -1,0 +1,16 @@
+﻿
+namespace Foo {
+    class Person {
+        public Person()
+        {
+        }
+
+        [Projectable]
+        public Person(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; set; }
+    }
+}

@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EntityFrameworkCore.Projectables.Benchmarks
 {
+    [MemoryDiagnoser]
     public class ProjectableProperties
     {
         const int innerLoop = 10000;

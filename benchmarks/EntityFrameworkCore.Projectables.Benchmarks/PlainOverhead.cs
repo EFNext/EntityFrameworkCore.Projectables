@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EntityFrameworkCore.Projectables.Benchmarks
 {
+    [MemoryDiagnoser]
     public class PlainOverhead
     {
         [Benchmark(Baseline = true)]

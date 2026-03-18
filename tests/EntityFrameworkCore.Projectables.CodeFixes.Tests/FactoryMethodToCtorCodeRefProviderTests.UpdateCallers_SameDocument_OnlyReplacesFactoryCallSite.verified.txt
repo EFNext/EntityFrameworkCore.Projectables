@@ -1,0 +1,23 @@
+﻿
+namespace Foo {
+    class Src { public int A { get; set; } public int B { get; set; } }
+    class Dest {
+        public Dest() { }
+        public int A { get; set; }
+        public int B { get; set; }
+        [Projectable]
+        public Dest(Src src)
+        {
+            A = src.A; B = src.B;
+        }
+    }
+    class Other {
+        public static int Compute() => 42;
+    }
+    class Consumer {
+        void Setup() {
+            var d = new Dest(new Src { A = 1, B = 2 });
+            var x = Other.Compute();
+        }
+    }
+}

@@ -1,0 +1,17 @@
+﻿
+namespace Foo {
+    class Input { public int Value { get; set; } }
+    class Output {
+        public Output()
+        {
+        }
+
+        public int Value { get; set; }
+        public string Name { get; set; }
+        [Projectable]
+        public Output(Input i)
+        {
+            Value = i.Value;
+        }
+    }
+}

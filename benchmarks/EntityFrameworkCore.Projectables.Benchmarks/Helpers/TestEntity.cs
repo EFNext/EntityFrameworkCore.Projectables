@@ -15,5 +15,8 @@ namespace EntityFrameworkCore.Projectables.Benchmarks.Helpers
 
         [Projectable]
         public int IdPlus1Method() => Id + 1;
+
+        [Projectable]
+        public int IdPlusDelta(int delta) => Id + delta;
     }
 }

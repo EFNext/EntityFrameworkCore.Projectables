@@ -1292,4 +1292,53 @@ namespace Foo {
 
         return Verifier.Verify(result.GeneratedTrees[0].ToString());
     }
+
+    [Fact]
+    public Task ProjectableConstructor_WithFullObject()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace Foo {
+    public class Customer {
+        public int Id { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public bool IsActive { get; set; }
+        public ICollection<Order> Orders { get; set; }
+    }
+    
+    public class Order {
+        public int Id { get; set; }
+        public decimal Amount { get; set; }
+    }
+
+    public class CustomerDto {
+        public int Id { get; set; }
+        public string FullName { get; set; }
+        public bool IsActive { get; set; }
+        public int OrderCount { get; set; }
+
+        public CustomerDto() { }   // required parameterless ctor
+
+        [Projectable]
+        public CustomerDto(Customer customer)
+        {
+            Id = customer.Id;
+            FullName = customer.FirstName + "" "" + customer.LastName;
+            IsActive = customer.IsActive;
+            OrderCount = customer.Orders.Count();
+        }
+    }
+}
+");
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
 }

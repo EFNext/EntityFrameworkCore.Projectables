@@ -1,0 +1,6 @@
+﻿SELECT [e].[Id], [e].[Name]
+FROM [Entity] AS [e]
+WHERE EXISTS (
+    SELECT 1
+    FROM [Entity] AS [e0]
+    WHERE [e0].[Id] >= 1 AND [e0].[Id] <= 5 AND [e0].[Id] = [e].[Id])

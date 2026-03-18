@@ -1,0 +1,5 @@
+﻿DECLARE @lowerBound int = 3;
+
+SELECT [e].[Id], [e].[Name]
+FROM [Entity] AS [e]
+WHERE [e].[Id] >= @lowerBound AND [e].[Id] <= 10

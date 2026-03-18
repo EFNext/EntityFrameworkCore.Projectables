@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 
 namespace EntityFrameworkCore.Projectables.FunctionalTests.ExtensionMethods
@@ -17,5 +19,10 @@ namespace EntityFrameworkCore.Projectables.FunctionalTests.ExtensionMethods
         [Projectable]
         public static Entity? LeadingEntity(this Entity entity, DbContext dbContext)
             => dbContext.Set<Entity>().Where(y => y.Id > entity.Id).FirstOrDefault();
+
+        [Projectable(UseMemberBody = nameof(NameEqualsExpr))]
+        public static bool NameEquals(this Entity a, Entity b) => a.Name == b.Name;
+
+        private static Expression<Func<Entity, Entity, bool>> NameEqualsExpr => (a, b) => a.Name == b.Name;
     }
 }

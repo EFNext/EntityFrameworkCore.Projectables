@@ -1,0 +1,7 @@
+﻿
+namespace Foo {
+    class C {
+        [Projectable(NullConditionalRewriteSupport = NullConditionalRewriteSupport.Ignore, AllowBlockBody = true)]
+        public int Bar() { return 42; }
+    }
+}

@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Override TargetFrameworks with an "s" from Directory.Build.props settings as needed -->
+    <TargetFrameworks>netstandard2.0;</TargetFrameworks>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <IsPackable>false</IsPackable>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

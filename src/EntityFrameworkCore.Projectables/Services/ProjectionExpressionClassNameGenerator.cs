@@ -37,7 +37,15 @@ namespace EntityFrameworkCore.Projectables.Services
 
         static string GenerateNameImpl(StringBuilder stringBuilder, string? namespaceName, IEnumerable<string>? nestedInClassNames, string memberName, IEnumerable<string>? parameterTypeNames)
         {
-            stringBuilder.Append(namespaceName?.Replace('.', '_'));
+            // Append namespace, replacing '.' separators with '_' in a single pass (no intermediate string).
+            if (namespaceName is not null)
+            {
+                foreach (var c in namespaceName)
+                {
+                    stringBuilder.Append(c == '.' ? '_' : c);
+                }
+            }
+
             stringBuilder.Append('_');
             var arity = 0;
             
@@ -65,7 +73,16 @@ namespace EntityFrameworkCore.Projectables.Services
                 }
 
             }
-            stringBuilder.Append(memberName.Replace(".", "__")); // Support explicit interface implementations
+
+            // Append member name; only allocate a replacement string for the rare explicit-interface case.
+            if (memberName.IndexOf('.') >= 0)
+            {
+                stringBuilder.Append(memberName.Replace(".", "__"));
+            }
+            else
+            {
+                stringBuilder.Append(memberName);
+            }
 
             // Add parameter types to make method overloads unique
             if (parameterTypeNames is not null)
@@ -76,20 +93,9 @@ namespace EntityFrameworkCore.Projectables.Services
                     stringBuilder.Append("_P");
                     stringBuilder.Append(parameterIndex);
                     stringBuilder.Append('_');
-                    // Replace characters that are not valid in type names with underscores
-                    var sanitizedTypeName = parameterTypeName
-                        .Replace("global::", "")  // Remove global:: prefix
-                        .Replace('.', '_')
-                        .Replace('<', '_')
-                        .Replace('>', '_')
-                        .Replace(',', '_')
-                        .Replace(' ', '_')
-                        .Replace('[', '_')
-                        .Replace(']', '_')
-                        .Replace('`', '_')
-                        .Replace(':', '_')  // Additional safety for any remaining colons
-                        .Replace('?', '_'); // Handle nullable reference types
-                    stringBuilder.Append(sanitizedTypeName);
+                    // Single-pass sanitization: replace invalid identifier characters with '_',
+                    // stripping the "global::" prefix on the fly — avoids 9 intermediate string allocations.
+                    AppendSanitizedTypeName(stringBuilder, parameterTypeName);
                     parameterIndex++;
                 }
             }
@@ -104,5 +110,26 @@ namespace EntityFrameworkCore.Projectables.Services
 
             return stringBuilder.ToString();
         }
+
+        /// <summary>
+        /// Appends <paramref name="typeName"/> to <paramref name="sb"/>, stripping the
+        /// <c>global::</c> prefix and replacing every character that is invalid in a C# identifier
+        /// with <c>'_'</c> — all in a single pass with no intermediate string allocations.
+        /// </summary>
+        private static void AppendSanitizedTypeName(StringBuilder sb, string typeName)
+        {
+            const string GlobalPrefix = "global::";
+            var start = typeName.StartsWith(GlobalPrefix, StringComparison.Ordinal) ? GlobalPrefix.Length : 0;
+
+            for (var i = start; i < typeName.Length; i++)
+            {
+                var c = typeName[i];
+                sb.Append(IsInvalidIdentifierChar(c) ? '_' : c);
+            }
+        }
+
+        private static bool IsInvalidIdentifierChar(char c) =>
+            c == '.' || c == '<' || c == '>' || c == ',' || c == ' ' ||
+            c == '[' || c == ']' || c == '`' || c == ':' || c == '?';
     }
 }

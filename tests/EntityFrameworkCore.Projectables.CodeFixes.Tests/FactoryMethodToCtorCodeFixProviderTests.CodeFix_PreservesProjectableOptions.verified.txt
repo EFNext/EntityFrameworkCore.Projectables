@@ -1,0 +1,14 @@
+﻿
+namespace Foo {
+    class OtherObj { }
+    class MyObj {
+        public MyObj()
+        {
+        }
+
+        [Projectable(NullConditionalRewriteSupport = NullConditionalRewriteSupport.Ignore)]
+        public MyObj(OtherObj obj)
+        {
+        }
+    }
+}

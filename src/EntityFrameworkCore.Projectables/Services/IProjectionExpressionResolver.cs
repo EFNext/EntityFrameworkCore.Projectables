@@ -1,10 +1,10 @@
 ﻿using System.Linq.Expressions;
 using System.Reflection;
 
-namespace EntityFrameworkCore.Projectables.Services
+namespace EntityFrameworkCore.Projectables.Services;
+
+public interface IProjectionExpressionResolver
 {
-    public interface IProjectionExpressionResolver
-    {
-        LambdaExpression FindGeneratedExpression(MemberInfo projectableMemberInfo);
-    }
+    LambdaExpression FindGeneratedExpression(MemberInfo projectableMemberInfo,
+        ProjectableAttribute? projectableAttribute = null);
 }

@@ -1,0 +1,5 @@
+﻿DECLARE @__targetName_0 nvarchar(4000) = N'Alice';
+
+SELECT [e].[Id], [e].[Name]
+FROM [Entity] AS [e]
+WHERE [e].[Name] = @__targetName_0

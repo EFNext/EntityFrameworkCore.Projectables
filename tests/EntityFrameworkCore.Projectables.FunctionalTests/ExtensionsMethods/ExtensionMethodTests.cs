@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using EntityFrameworkCore.Projectables.FunctionalTests.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Scaffolding.Metadata;
-using ScenarioTests;
 using VerifyXunit;
 using Xunit;
 
@@ -59,6 +58,18 @@ namespace EntityFrameworkCore.Projectables.FunctionalTests.ExtensionMethods
 
             var query = dbContext.Set<Entity>()
                 .Select(x => x.LeadingEntity(dbContext));
+
+            return Verifier.Verify(query.ToQueryString());
+        }
+
+        [Fact]
+        public Task ExtensionMethod_WithExpressionPropertyBody()
+        {
+            using var dbContext = new SampleDbContext<Entity>();
+
+            var nameToMatch = "Alice";
+            var query = dbContext.Set<Entity>()
+                .Where(x => x.NameEquals(new Entity { Name = nameToMatch }));
 
             return Verifier.Verify(query.ToQueryString());
         }

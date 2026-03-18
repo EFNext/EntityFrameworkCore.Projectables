@@ -471,4 +471,32 @@ namespace Foos {
 
         return Verifier.Verify(result.GeneratedTrees[0].ToString());
     }
+    
+    [Fact]
+    public Task SimpleProjectableComputedPropertyWithSetter()
+    {
+        var compilation = CreateCompilation(@"
+using System;
+using EntityFrameworkCore.Projectables;
+namespace Foo {
+    class C {
+        public int Bar { get; set; }
+
+        [Projectable]
+        public int Foo 
+        { 
+            get => Bar;
+            set => Bar = value;
+        }
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
 }
