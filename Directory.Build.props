@@ -14,10 +14,10 @@
   <PropertyGroup>
 	<Authors>Koen Bekkenutte</Authors>
 	<PackageLicenseExpression>MIT</PackageLicenseExpression>
-	<PackageProjectUrl>https://github.com/EFLabs/EntityFrameworkCore.Projectables</PackageProjectUrl>
-	<RepositoryUrl>https://github.com/EFLabs/EntityFrameworkCore.Projectables.git</RepositoryUrl>
+	<PackageProjectUrl>https://github.com/EFNext/EntityFrameworkCore.Projectables</PackageProjectUrl>
+	<RepositoryUrl>https://github.com/EFNext/EntityFrameworkCore.Projectables.git</RepositoryUrl>
 	<RepositoryType>git</RepositoryType>
-	<PackageReleaseNotes>https://github.com/EFLabs/EntityFrameworkCore.Projectables/releases</PackageReleaseNotes>
+	<PackageReleaseNotes>https://github.com/EFNext/EntityFrameworkCore.Projectables/releases</PackageReleaseNotes>
 	<Description>Project over properties and functions in your linq queries</Description>
   </PropertyGroup>
 </Project>

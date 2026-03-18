@@ -11,8 +11,8 @@ env:
   # Disable sending usage data to Microsoft
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   # GitHub Packages Feed settings
-  GITHUB_FEED: https://nuget.pkg.github.com/EFLabs/
-  GITHUB_USER: EFLabs
+  GITHUB_FEED: https://nuget.pkg.github.com/EFNext/
+  GITHUB_USER: EFNext
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   # Official NuGet Feed settings
   NUGET_FEED: https://api.nuget.org/v3/index.json
