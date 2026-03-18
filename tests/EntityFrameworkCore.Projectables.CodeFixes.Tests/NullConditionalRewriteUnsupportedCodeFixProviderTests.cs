@@ -11,7 +11,6 @@ namespace EntityFrameworkCore.Projectables.CodeFixes.Tests;
 /// The fix sets <c>NullConditionalRewriteSupport</c> on the <c>[Projectable]</c> attribute to
 /// either <c>Ignore</c> (action index 0) or <c>Rewrite</c> (action index 1).
 /// </summary>
-[UsesVerify]
 public class NullConditionalRewriteUnsupportedCodeFixProviderTests : CodeFixTestBase
 {
     private readonly static NullConditionalRewriteUnsupportedCodeFixProvider _provider = new();

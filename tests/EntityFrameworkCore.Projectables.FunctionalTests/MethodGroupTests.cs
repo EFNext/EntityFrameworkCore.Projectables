@@ -8,7 +8,6 @@ using Xunit;
 
 namespace EntityFrameworkCore.Projectables.FunctionalTests;
 
-[UsesVerify]
 public class MethodGroupTests
 {
     public record Entity

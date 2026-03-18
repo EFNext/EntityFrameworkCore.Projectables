@@ -23,16 +23,16 @@ samples/                                              # Readme sample project
 
 ## Build & SDK
 
-| Setting | Value |
-|---|---|
-| .NET SDK | 10.0.x (`global.json`, `rollForward: latestMinor`) |
-| Target frameworks | `net8.0` + `net10.0` (library); `net8.0;net9.0;net10.0` (functional tests) |
-| C# language version | `12.0` on `net8.0`, `14.0` on `net10.0` |
-| Nullable | `enable` |
-| Implicit usings | `enable` |
-| Warnings as errors | `TreatWarningsAsErrors = true` — **zero warnings allowed** |
-| Suppressed warning | `CS1591` (missing XML doc) |
-| Assembly signing | `Key.snk` (src projects only) |
+| Setting             | Value                                                                      |
+|---------------------|----------------------------------------------------------------------------|
+| .NET SDK            | 10.0.x (`global.json`, `rollForward: latestMinor`)                         |
+| Target frameworks   | `net8.0` + `net10.0` (library); `net8.0;net9.0;net10.0` (functional tests) |
+| C# language version | `12.0` on `net8.0`, `14.0` on `net10.0`                                    |
+| Nullable            | `enable`                                                                   |
+| Implicit usings     | `enable`                                                                   |
+| Warnings as errors  | `TreatWarningsAsErrors = true` — **zero warnings allowed**                 |
+| Suppressed warning  | `CS1591` (missing XML doc)                                                 |
+| Assembly signing    | `Key.snk` (src projects only)                                              |
 
 The generator project targets `netstandard2.0` only (Roslyn analyzers requirement).
 
@@ -98,18 +98,18 @@ Use file-scoped namespaces (`namespace Foo;`) in all new files **except** when t
 ## Testing Guidelines
 
 ### Test projects and frameworks
-| Project | Framework | Library |
-|---|---|---|
-| `Generator.Tests` | xUnit 2 | `Verify.Xunit` snapshot testing |
-| `FunctionalTests` | xUnit 2 + ScenarioTests | `Verify.Xunit` + `Microsoft.EntityFrameworkCore.SqlServer` |
-| `Tests` | xUnit 2 | plain assertions |
+| Project           | Framework                | Library                                                      |
+|-------------------|--------------------------|--------------------------------------------------------------|
+| `Generator.Tests` | xUnit v3                 | `Verify.XunitV3` snapshot testing for the code generator     |
+| `CodeFixer.Tests` | xUnit v3                 | `Verify.XunitV3` snapshot testing for the code fixes         |
+| `FunctionalTests` | xUnit v3 + ScenarioTests | `Verify.XunitV3` + `Microsoft.EntityFrameworkCore.SqlServer` |
+| `Tests`           | xUnit v3                 | plain assertions                                             |
 
-### Verify.Xunit — snapshot testing
+### Verify.XunitV3 — snapshot testing
 
 **Every test that calls `Verifier.Verify(...)` must:**
 1. Return `Task` (not `void`)
-2. Have `[UsesVerify]` on the class
-3. Have a corresponding `.verified.txt` file committed alongside the test file
+2. Have a corresponding `.verified.txt` file committed alongside the test file
 
 **Naming convention for verified files:**
 `{ClassName}.{MethodName}.verified.txt`
@@ -223,17 +223,17 @@ $env:VERIFY_AUTO_APPROVE = "true"; dotnet test
 
 ### Key files in `EntityFrameworkCore.Projectables.Generator`
 
-| File | Responsibility |
-|---|---|
-| `ProjectionExpressionGenerator.cs` | `IIncrementalGenerator` entry point — wires up the pipeline |
-| `ProjectableInterpreter.cs` (+ partials) | Converts a `MemberDeclarationSyntax` into a `ProjectableDescriptor` |
-| `ExpressionSyntaxRewriter.cs` (+ partials) | Rewrites expressions: null-conditionals, enum expansions, switch expressions |
-| `DeclarationSyntaxRewriter.cs` | Rewrites declarations (fully-qualified names, etc.) |
-| `BlockStatementConverter.cs` | Converts block-bodied methods to expression trees |
-| `ProjectableDescriptor.cs` | Pure data record describing a projectable member |
-| `ProjectableAttributeData.cs` | Serializable snapshot of `[Projectable]` attribute values (no live Roslyn objects) |
-| `ProjectionRegistryEmitter.cs` | Emits `ProjectionRegistry.g.cs` |
-| `Diagnostics.cs` | All `DiagnosticDescriptor` constants (EFP0001–EFP0009) |
+| File                                       | Responsibility                                                                     |
+|--------------------------------------------|------------------------------------------------------------------------------------|
+| `ProjectionExpressionGenerator.cs`         | `IIncrementalGenerator` entry point — wires up the pipeline                        |
+| `ProjectableInterpreter.cs` (+ partials)   | Converts a `MemberDeclarationSyntax` into a `ProjectableDescriptor`                |
+| `ExpressionSyntaxRewriter.cs` (+ partials) | Rewrites expressions: null-conditionals, enum expansions, switch expressions       |
+| `DeclarationSyntaxRewriter.cs`             | Rewrites declarations (fully-qualified names, etc.)                                |
+| `BlockStatementConverter.cs`               | Converts block-bodied methods to expression trees                                  |
+| `ProjectableDescriptor.cs`                 | Pure data record describing a projectable member                                   |
+| `ProjectableAttributeData.cs`              | Serializable snapshot of `[Projectable]` attribute values (no live Roslyn objects) |
+| `ProjectionRegistryEmitter.cs`             | Emits `ProjectionRegistry.g.cs`                                                    |
+| `Diagnostics.cs`                           | All `DiagnosticDescriptor` constants (EFP0001–EFP0009)                             |
 
 ### Incremental generator rules
 - **Never capture live Roslyn objects** (`ISymbol`, `SemanticModel`, `Compilation`, `AttributeData`) in the incremental pipeline transforms — they break caching. Use `ProjectableAttributeData` (a plain struct) instead.
@@ -243,15 +243,15 @@ $env:VERIFY_AUTO_APPROVE = "true"; dotnet test
 
 ## Diagnostics Reference
 
-| ID | Severity | Title |
-|---|---|---|
-| EFP0001 | Warning | Block-bodied member support is experimental |
-| EFP0002 | Error | Null-conditional expression unsupported |
-| EFP0003 | Warning | Unsupported statement in block-bodied method |
-| EFP0004 | Error | Statement with side effects in block-bodied method |
-| EFP0005 | Warning | Potential side effect in block-bodied method |
-| EFP0006 | Error | Method/property should expose a body definition |
-| EFP0007 | Warning | Non-projectable method call in block body |
+| ID      | Severity | Title                                              |
+|---------|----------|----------------------------------------------------|
+| EFP0001 | Warning  | Block-bodied member support is experimental        |
+| EFP0002 | Error    | Null-conditional expression unsupported            |
+| EFP0003 | Warning  | Unsupported statement in block-bodied method       |
+| EFP0004 | Error    | Statement with side effects in block-bodied method |
+| EFP0005 | Warning  | Potential side effect in block-bodied method       |
+| EFP0006 | Error    | Method/property should expose a body definition    |
+| EFP0007 | Warning  | Non-projectable method call in block body          |
 
 ---
 

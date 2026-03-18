@@ -11,7 +11,6 @@ using Xunit;
 
 namespace EntityFrameworkCore.Projectables.FunctionalTests
 {
-    [UsesVerify]
     public class StatefullPropertyTests
     {
         public record Entity

@@ -43,34 +43,34 @@ public class ChangeTrackerTests
     public async Task CanQueryAndChangeTrackedEntities()
     {
         using var dbContext = new SqliteSampleDbContext<Entity>();
-        await dbContext.Database.EnsureDeletedAsync();
-        await dbContext.Database.EnsureCreatedAsync();
+        await dbContext.Database.EnsureDeletedAsync(TestContext.Current.CancellationToken);
+        await dbContext.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
         dbContext.Add(new Entity());
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         dbContext.ChangeTracker.Clear();
 
-        var entity = await dbContext.Set<Entity>().AsTracking().FirstAsync();
+        var entity = await dbContext.Set<Entity>().AsTracking().FirstAsync(cancellationToken: TestContext.Current.CancellationToken);
         var entityEntry = dbContext.ChangeTracker.Entries().Single();
         Assert.Same(entityEntry.Entity, entity);
         dbContext.Set<Entity>().Remove(entity);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]
     public async Task CanSaveChanges()
     {
         using var dbContext = new SqliteSampleDbContext<Entity>();
-        await dbContext.Database.EnsureDeletedAsync();
-        await dbContext.Database.EnsureCreatedAsync();
+        await dbContext.Database.EnsureDeletedAsync(TestContext.Current.CancellationToken);
+        await dbContext.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
         dbContext.Add(new Entity());
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         dbContext.ChangeTracker.Clear();
 
-        var entity = await dbContext.Set<Entity>().AsTracking().FirstAsync();
+        var entity = await dbContext.Set<Entity>().AsTracking().FirstAsync(cancellationToken: TestContext.Current.CancellationToken);
         entity.Name = "test";
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         dbContext.ChangeTracker.Clear();
-        var entity2 = await dbContext.Set<Entity>().FirstAsync();
+        var entity2 = await dbContext.Set<Entity>().FirstAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal("test", entity2.Name);
     }
 }

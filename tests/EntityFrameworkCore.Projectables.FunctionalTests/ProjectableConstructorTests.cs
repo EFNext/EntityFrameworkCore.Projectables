@@ -9,7 +9,6 @@ using Xunit;
 
 namespace EntityFrameworkCore.Projectables.FunctionalTests
 {
-    [UsesVerify]
     public class ProjectableConstructorTests
     {
         public class PersonEntity

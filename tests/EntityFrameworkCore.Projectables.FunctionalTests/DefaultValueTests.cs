@@ -7,7 +7,6 @@ using Xunit;
 
 namespace EntityFrameworkCore.Projectables.FunctionalTests
 {
-    [UsesVerify]
     public class DefaultValueTests
     {
         public record Entity

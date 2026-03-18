@@ -3,11 +3,9 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using VerifyXunit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace EntityFrameworkCore.Projectables.Generator.Tests;
 
-[UsesVerify]
 public class MethodTests : ProjectionExpressionGeneratorTestsBase
 {
     public MethodTests(ITestOutputHelper testOutputHelper) : base(testOutputHelper) { }

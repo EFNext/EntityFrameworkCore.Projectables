@@ -14,7 +14,6 @@ namespace EntityFrameworkCore.Projectables.FunctionalTests.ExtensionMembers
     /// Note: Extension properties cannot currently be used directly in LINQ expression trees (CS9296),
     /// so only extension methods are tested here.
     /// </summary>
-    [UsesVerify]
     public class ExtensionMemberTests
     {
         [Fact]

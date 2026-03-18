@@ -10,7 +10,6 @@ using Xunit;
 
 namespace EntityFrameworkCore.Projectables.FunctionalTests.Generics
 {
-    [UsesVerify]
     public class GenericEntityTests
     {
         public abstract class BaseEntity<TSelf, TKey>

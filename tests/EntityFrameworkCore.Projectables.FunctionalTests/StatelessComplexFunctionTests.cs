@@ -12,7 +12,6 @@ using Xunit;
 
 namespace EntityFrameworkCore.Projectables.FunctionalTests
 {
-    [UsesVerify]
     public class StatelessComplexFunctionTests
     {
         public record Entity
