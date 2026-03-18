@@ -1,0 +1,4 @@
+﻿DECLARE @__argument_0 int = 1;
+
+SELECT @__argument_0
+FROM [Entity] AS [e]

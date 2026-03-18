@@ -1,5 +1,0 @@
-SELECT CASE
-    WHEN [e].[Id] >= 0 THEN CAST(1 AS bit)
-    ELSE CAST(0 AS bit)
-END, [e].[Id], [e].[Name]
-FROM [Entity] AS [e]

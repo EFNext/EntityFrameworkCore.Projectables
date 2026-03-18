@@ -1,0 +1,2 @@
+﻿SELECT 0
+FROM [Entity] AS [e]

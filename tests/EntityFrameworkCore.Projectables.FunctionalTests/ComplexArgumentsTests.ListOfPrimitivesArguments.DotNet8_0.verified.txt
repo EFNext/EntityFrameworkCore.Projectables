@@ -1,0 +1,8 @@
+﻿DECLARE @__validList_0 nvarchar(4000) = N'[1,2,3]';
+
+SELECT [t].[Id]
+FROM [TestEntity] AS [t]
+WHERE [t].[Id] IN (
+    SELECT [v].[value]
+    FROM OPENJSON(@__validList_0) WITH ([value] int '$') AS [v]
+)

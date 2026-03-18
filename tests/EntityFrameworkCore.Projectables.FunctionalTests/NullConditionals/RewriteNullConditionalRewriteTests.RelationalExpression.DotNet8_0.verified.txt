@@ -1,0 +1,12 @@
+﻿SELECT CAST(1 AS bit), [e].[Id], [e0].[Id], [e0].[EntityId], [e0].[Name], [t0].[Id], [t0].[EntityId], [t0].[Name]
+FROM [Entity] AS [e]
+LEFT JOIN [Entity] AS [e0] ON [e].[Id] = [e0].[EntityId]
+LEFT JOIN (
+    SELECT [t].[Id], [t].[EntityId], [t].[Name]
+    FROM (
+        SELECT [e1].[Id], [e1].[EntityId], [e1].[Name], ROW_NUMBER() OVER(PARTITION BY [e1].[EntityId] ORDER BY [e1].[Id]) AS [row]
+        FROM [Entity] AS [e1]
+    ) AS [t]
+    WHERE 0 < [t].[row] AND [t].[row] <= 1
+) AS [t0] ON [e].[Id] = [t0].[EntityId]
+ORDER BY [e].[Id]

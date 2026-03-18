@@ -1,0 +1,2 @@
+﻿SELECT CAST(1 AS bit), [e].[Id], [e].[Name]
+FROM [Entity] AS [e]

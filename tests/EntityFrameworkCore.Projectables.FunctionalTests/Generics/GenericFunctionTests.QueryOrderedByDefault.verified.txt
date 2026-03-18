@@ -1,3 +1,0 @@
-SELECT [e].[Id]
-FROM [Entity] AS [e]
-ORDER BY [e].[Id]

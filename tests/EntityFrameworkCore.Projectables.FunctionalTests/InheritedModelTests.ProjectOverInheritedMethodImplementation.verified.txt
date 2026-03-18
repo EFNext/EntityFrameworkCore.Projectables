@@ -1,2 +1,0 @@
-SELECT 2
-FROM [MoreConcrete] AS [m]

@@ -1,4 +1,4 @@
-SELECT [p].[Score], N'Grade:' + CASE
+﻿SELECT [p].[Score], N'Grade:' + CASE
     WHEN [p].[Score] >= 90 THEN N'A'
     ELSE N'B'
 END AS [Grade]

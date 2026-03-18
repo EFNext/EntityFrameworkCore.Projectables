@@ -1,2 +1,0 @@
-SELECT [e].[Id] * [e].[Id]
-FROM [Entity] AS [e]

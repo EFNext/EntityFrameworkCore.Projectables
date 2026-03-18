@@ -1,3 +1,0 @@
-SELECT [t].[Id]
-FROM [TestEntity] AS [t]
-WHERE [t].[Id] IN (1, 2, 3)

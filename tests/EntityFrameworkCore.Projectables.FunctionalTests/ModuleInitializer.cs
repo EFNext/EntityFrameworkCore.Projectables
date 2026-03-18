@@ -21,9 +21,7 @@ namespace EntityFrameworkCore.Projectables.FunctionalTests
             CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
             CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 
-#if !NET8_0
             VerifierSettings.UniqueForTargetFrameworkAndVersion();
-#endif
         }
     }
 }
