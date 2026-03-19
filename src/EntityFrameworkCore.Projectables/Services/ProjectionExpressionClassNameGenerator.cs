@@ -131,5 +131,42 @@ namespace EntityFrameworkCore.Projectables.Services
         private static bool IsInvalidIdentifierChar(char c) =>
             c == '.' || c == '<' || c == '>' || c == ',' || c == ' ' ||
             c == '[' || c == ']' || c == '`' || c == ':' || c == '?';
+
+        /// <summary>
+        /// Returns the name of the private hidden accessor method generated inside the declaring
+        /// partial class when inline generation is used. The name is unique within the class and
+        /// encodes the member name plus parameter types for overload disambiguation.
+        /// <para>
+        /// Example: <c>Score</c> → <c>__Projectable__Score</c>,
+        /// <c>Add(int, long)</c> → <c>__Projectable__Add_P0_int_P1_long</c>.
+        /// </para>
+        /// </summary>
+        public static string GenerateInlineMethodName(string memberName, IEnumerable<string>? parameterTypeNames)
+        {
+            var sb = new StringBuilder("__Projectable__");
+
+            if (memberName.IndexOf('.') >= 0)
+            {
+                sb.Append(memberName.Replace(".", "__"));
+            }
+            else
+            {
+                sb.Append(memberName);
+            }
+
+            if (parameterTypeNames is not null)
+            {
+                var idx = 0;
+                foreach (var typeName in parameterTypeNames)
+                {
+                    sb.Append("_P");
+                    sb.Append(idx++);
+                    sb.Append('_');
+                    AppendSanitizedTypeName(sb, typeName);
+                }
+            }
+
+            return sb.ToString();
+        }
     }
 }

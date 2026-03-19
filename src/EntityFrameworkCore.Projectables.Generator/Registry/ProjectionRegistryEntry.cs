@@ -12,7 +12,8 @@ sealed internal record ProjectionRegistryEntry(
     ProjectionRegistryMemberType MemberKind,
     string MemberLookupName,
     string GeneratedClassFullName,
-    EquatableImmutableArray ParameterTypeNames
+    EquatableImmutableArray ParameterTypeNames,
+    string? InlineMethodName = null
 );
 
 /// <summary>

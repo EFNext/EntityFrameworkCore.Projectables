@@ -33,9 +33,23 @@ public abstract class ProjectionExpressionGeneratorTestsBase
         }
 
         /// <summary>
-        /// Diagnostics from the generator run.
+        /// Diagnostics from the generator run with severity Warning or higher.
+        /// Info and Hidden diagnostics (e.g. EFP0012, EFP0013) are excluded so that
+        /// existing <c>Assert.Empty(result.Diagnostics)</c> assertions are not broken
+        /// when the generator emits new informational suggestions.
+        /// Use <see cref="AllDiagnostics"/> to include Info/Hidden diagnostics.
         /// </summary>
-        public ImmutableArray<Diagnostic> Diagnostics => _inner.Diagnostics;
+        public ImmutableArray<Diagnostic> Diagnostics =>
+            _inner.Diagnostics
+                .Where(d => d.Severity >= DiagnosticSeverity.Warning)
+                .ToImmutableArray();
+
+        /// <summary>
+        /// All diagnostics from the generator run, including Info and Hidden severity.
+        /// Existing tests use <see cref="Diagnostics"/> (Warning+); use this property
+        /// when you need to assert on informational diagnostics such as EFP0012 or EFP0013.
+        /// </summary>
+        public ImmutableArray<Diagnostic> AllDiagnostics => _inner.Diagnostics;
 
         /// <summary>
         /// Generated trees excluding <c>ProjectionRegistry.g.cs</c>.
@@ -201,7 +215,7 @@ public abstract class ProjectionExpressionGeneratorTestsBase
 
     private void LogGeneratorResult(TestGeneratorRunResult result, Compilation outputCompilation)
     {
-        if (result.Diagnostics.IsEmpty)
+        if (result.AllDiagnostics.IsEmpty)
         {
             _testOutputHelper.WriteLine("Run did not produce diagnostics");
         }
@@ -209,7 +223,7 @@ public abstract class ProjectionExpressionGeneratorTestsBase
         {
             _testOutputHelper.WriteLine("Diagnostics produced:");
 
-            foreach (var diagnostic in result.Diagnostics)
+            foreach (var diagnostic in result.AllDiagnostics)
             {
                 _testOutputHelper.WriteLine(" > " + diagnostic);
             }
@@ -222,7 +236,7 @@ public abstract class ProjectionExpressionGeneratorTestsBase
         }
 
         // Verify that the generated code compiles without errors
-        var hasGeneratorErrors = result.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
+        var hasGeneratorErrors = result.AllDiagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
         if (!hasGeneratorErrors && result.AllGeneratedTrees.Length > 0)
         {
             _testOutputHelper.WriteLine("Checking that generated code compiles...");

@@ -284,6 +284,30 @@ namespace EntityFrameworkCore.Projectables.Services
                 }
             }
 
+            // ── Inline path ─────────────────────────────────────────────────────────────
+            // When the containing class was declared partial the generator emits the accessor
+            // as a private static method directly on the declaring type instead of an external
+            // generated class. Try this path first — it is O(1) hash lookup on the closed type.
+            var inlineMethodName = ProjectionExpressionClassNameGenerator.GenerateInlineMethodName(
+                memberLookupName, parameterTypeNames);
+
+            var inlineExpressionMethod = originalDeclaringType.GetMethod(
+                inlineMethodName, BindingFlags.Static | BindingFlags.NonPublic);
+
+            if (inlineExpressionMethod is not null)
+            {
+                if (projectableMemberInfo is MethodInfo mi2
+                    && mi2.GetGenericArguments() is { Length: > 0 } methodGenericArgs2)
+                {
+                    inlineExpressionMethod = inlineExpressionMethod.MakeGenericMethod(methodGenericArgs2);
+                }
+
+                var callInline = Expression.Call(inlineExpressionMethod);
+                var castInline = Expression.Convert(callInline, typeof(LambdaExpression));
+                return Expression.Lambda<Func<LambdaExpression>>(castInline).Compile();
+            }
+
+            // ── External-class path (original slow path) ────────────────────────────────
             // GetNestedTypePath() returns a Type[] — project to string[] with a direct loop, no LINQ Select.
             var generatedContainingTypeName = ProjectionExpressionClassNameGenerator.GenerateFullName(
                 declaringType.Namespace,
