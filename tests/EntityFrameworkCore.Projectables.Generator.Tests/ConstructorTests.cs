@@ -1341,4 +1341,119 @@ namespace Foo {
 
         return Verifier.Verify(result.GeneratedTrees[0].ToString());
     }
+
+    // ── Private / protected parameterless constructor in partial classes ──────
+
+    [Fact]
+    public Task ProjectableConstructor_PartialClass_PrivateParameterlessCtor_Succeeds()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    public partial class PersonDto {
+        public string Name { get; set; }
+
+        private PersonDto() { }
+
+        [Projectable]
+        public PersonDto(string name) {
+            Name = name;
+        }
+    }
+}
+");
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
+
+    [Fact]
+    public Task ProjectableConstructor_PartialClass_ProtectedParameterlessCtor_Succeeds()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    public partial class PersonDto {
+        public string Name { get; set; }
+
+        protected PersonDto() { }
+
+        [Projectable]
+        public PersonDto(string name) {
+            Name = name;
+        }
+    }
+}
+");
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
+
+    [Fact]
+    public void ProjectableConstructor_NonPartialClass_PrivateParameterlessCtor_EmitsDiagnostic()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    class PersonDto {
+        public string Name { get; set; }
+
+        private PersonDto() { }
+
+        [Projectable]
+        public PersonDto(string name) {
+            Name = name;
+        }
+    }
+}
+");
+        var result = RunGenerator(compilation);
+
+        // EFP0013 is Info (not counted in Diagnostics), EFP0008 is Error
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal("EFP0008", diagnostic.Id);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.Empty(result.GeneratedTrees);
+    }
+
+    [Fact]
+    public void ProjectableConstructor_PartialInnerClass_NonPartialOuter_PrivateCtor_EmitsDiagnostic()
+    {
+        // Only the inner class is partial — the outer is not, so inline generation
+        // is NOT used and a private parameterless constructor must still fail.
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    class Outer {
+        public partial class PersonDto {
+            public string Name { get; set; }
+
+            private PersonDto() { }
+
+            [Projectable]
+            public PersonDto(string name) {
+                Name = name;
+            }
+        }
+    }
+}
+");
+        var result = RunGenerator(compilation);
+
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal("EFP0008", diagnostic.Id);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.Empty(result.GeneratedTrees);
+    }
 }

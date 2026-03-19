@@ -1,0 +1,16 @@
+﻿
+namespace Foo {
+    partial class PersonDto {
+        private PersonDto()
+        {
+        }
+
+        public string Name { get; set; }
+
+        [Projectable]
+        public PersonDto(string name)
+        {
+            Name = name;
+        }
+    }
+}

@@ -261,6 +261,135 @@ namespace Foo {
         // Extension members never get EFP0013
         Assert.DoesNotContain(result.AllDiagnostics, d => d.Id == "EFP0013");
     }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Private / protected member access via inline generation
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public Task PartialClass_PrivateProperty_UsedInPublicProjectable()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+namespace Foo {
+    public partial class MyClass {
+        public int Id { get; set; }
+        [Projectable]
+        private int Doubled => Id * 2;
+        [Projectable]
+        public int Score => Doubled + 1;
+    }
+}");
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Equal(2, result.GeneratedTrees.Length);
+        // Both inline accessors must be generated inside the partial class
+        Assert.All(result.GeneratedTrees, t =>
+            Assert.DoesNotContain("EntityFrameworkCore.Projectables.Generated", t.GetText().ToString()));
+
+        return Verifier.Verify(result.GeneratedTrees.Select(t => t.ToString()));
+    }
+
+    [Fact]
+    public Task PartialClass_ProtectedProperty_UsedInPublicProjectable()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+namespace Foo {
+    public partial class MyClass {
+        public int Id { get; set; }
+        [Projectable]
+        protected int Doubled => Id * 2;
+        [Projectable]
+        public int Score => Doubled + 1;
+    }
+}");
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Equal(2, result.GeneratedTrees.Length);
+
+        return Verifier.Verify(result.GeneratedTrees.Select(t => t.ToString()));
+    }
+
+    [Fact]
+    public Task PartialClass_PrivateMethod_UsedInPublicProjectable()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+namespace Foo {
+    public partial class MyClass {
+        public int Id { get; set; }
+        [Projectable]
+        private int Double(int x) => x * 2;
+        [Projectable]
+        public int Score(int delta) => Double(Id) + delta;
+    }
+}");
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Equal(2, result.GeneratedTrees.Length);
+
+        return Verifier.Verify(result.GeneratedTrees.Select(t => t.ToString()));
+    }
+
+    [Fact]
+    public Task PartialClass_Constructor_GeneratesInlineAccessor()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+namespace Foo {
+    public partial class PointDto {
+        public int X { get; set; }
+        public int Y { get; set; }
+        public PointDto() { }
+        [Projectable]
+        public PointDto(int x, int y) {
+            X = x;
+            Y = y;
+        }
+    }
+}");
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+        // Inline: accessor inside partial class, not in Generated namespace
+        Assert.DoesNotContain("EntityFrameworkCore.Projectables.Generated", result.GeneratedTrees[0].GetText().ToString());
+        Assert.Contains("__Projectable___ctor", result.GeneratedTrees[0].GetText().ToString());
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
+
+    [Fact]
+    public Task PartialClass_Constructor_WithPrivateStaticHelper()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+namespace Foo {
+    public partial class PersonDto {
+        public int Id { get; set; }
+        public string FullName { get; set; }
+        public PersonDto() { }
+        [Projectable]
+        public PersonDto(int id, string firstName, string lastName) {
+            Id = id;
+            FullName = FormatName(firstName, lastName);
+        }
+        [Projectable]
+        private static string FormatName(string first, string last) => first + "" "" + last;
+    }
+}");
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        // Constructor + static method = 2 inline generated trees
+        Assert.Equal(2, result.GeneratedTrees.Length);
+
+        return Verifier.Verify(result.GeneratedTrees.Select(t => t.ToString()));
+    }
 }
 
 

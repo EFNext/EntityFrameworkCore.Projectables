@@ -102,6 +102,91 @@ namespace Foo {
                 "EFP0008",
                 FirstConstructorIdentifierSpan,
                 _provider));
+
+    // ── Partial class — private constructor fix ───────────────────────────────
+
+    [Fact]
+    public async Task PartialClass_OffersBothPublicAndPrivateConstructorFix()
+    {
+        var actions = await GetCodeFixActionsAsync(
+            @"
+namespace Foo {
+    partial class MyClass {
+        [Projectable]
+        public MyClass(int value) { }
+    }
+}",
+            "EFP0008",
+            FirstConstructorIdentifierSpan,
+            _provider);
+
+        Assert.Equal(2, actions.Count);
+        Assert.Contains(actions, a => a.Title.Contains("private", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(actions, a => !a.Title.Contains("private", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task NonPartialClass_OffersOnlyPublicConstructorFix()
+    {
+        var actions = await GetCodeFixActionsAsync(
+            @"
+namespace Foo {
+    class MyClass {
+        [Projectable]
+        public MyClass(int value) { }
+    }
+}",
+            "EFP0008",
+            FirstConstructorIdentifierSpan,
+            _provider);
+
+        var action = Assert.Single(actions);
+        Assert.DoesNotContain("private", action.Title, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public Task AddPrivateParamLessConstructor_ToPartialClass() =>
+        Verifier.Verify(
+            ApplyCodeFixAsync(
+                @"
+namespace Foo {
+    partial class PersonDto {
+        public string Name { get; set; }
+
+        [Projectable]
+        public PersonDto(string name)
+        {
+            Name = name;
+        }
+    }
+}",
+                "EFP0008",
+                FirstConstructorIdentifierSpan,
+                _provider,
+                actionIndex: 1));   // index 1 = private fix
+
+    [Fact]
+    public async Task PartialClass_NestedInsideNonPartialOuter_OffersOnlyPublicFix()
+    {
+        // Inner is partial but outer is not → inline generation won't be used
+        // → private constructor would still trigger EFP0008 → only offer public fix.
+        var actions = await GetCodeFixActionsAsync(
+            @"
+namespace Foo {
+    class Outer {
+        partial class Inner {
+            [Projectable]
+            public Inner(int value) { }
+        }
+    }
+}",
+            "EFP0008",
+            FirstConstructorIdentifierSpan,
+            _provider);
+
+        var action = Assert.Single(actions);
+        Assert.DoesNotContain("private", action.Title, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 

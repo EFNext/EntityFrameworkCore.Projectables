@@ -1,0 +1,2 @@
+﻿SELECT [p].[Id] * 2 + 3
+FROM [PrivateMethodEntity] AS [p]
