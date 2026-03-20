@@ -237,9 +237,11 @@ namespace EntityFrameworkCore.Projectables.Services
         /// accessor (inline or external-class path), invokes it, and returns the resulting
         /// <see cref="LambdaExpression"/>. Returns <c>null</c> if no generated type is found.
         /// <para>
-        /// Using <c>MethodInfo.Invoke</c> rather than a compiled delegate is correct here because
-        /// the result is cached in <see cref="_reflectionCache"/> — the invocation cost is paid
-        /// exactly once per member regardless of how many EF Core queries reference it.
+        /// Using <c>MethodInfo.Invoke</c> rather than a compiled delegate is appropriate here because
+        /// the result is cached in <see cref="_reflectionCache"/> — the invocation cost is paid only
+        /// on cache misses, and subsequent EF Core queries reuse the cached expression. Under
+        /// contention the value factory may be invoked more than once, but only a single expression
+        /// instance is ultimately stored per member.
         /// </para>
         /// </summary>
         private static LambdaExpression? BuildReflectionExpression(MemberInfo projectableMemberInfo)
