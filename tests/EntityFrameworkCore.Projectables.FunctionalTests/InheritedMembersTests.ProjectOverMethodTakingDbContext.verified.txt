@@ -1,2 +1,0 @@
-SELECT CAST([c].[Age] AS float) / [c].[AverageLifespan] AS [LifeProgression], CAST([c].[MentalAge] AS float) / [c].[AverageLifespan] AS [MentalLifeProgression]
-FROM [Cat] AS [c]

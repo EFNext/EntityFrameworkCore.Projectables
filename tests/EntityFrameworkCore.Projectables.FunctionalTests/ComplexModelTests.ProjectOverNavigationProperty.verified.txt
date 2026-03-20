@@ -1,6 +1,0 @@
-SELECT (
-    SELECT TOP(1) [o].[RecordDate]
-    FROM [Order] AS [o]
-    WHERE [u].[Id] = [o].[UserId]
-    ORDER BY [o].[RecordDate] DESC)
-FROM [User] AS [u]

@@ -1,2 +1,2 @@
-SELECT [p].[FirstName] AS [Code], N'[' + COALESCE([p].[FirstName], N'') + N']' AS [Label]
+﻿SELECT [p].[FirstName] AS [Code], N'[' + COALESCE([p].[FirstName], N'') + N']' AS [Label]
 FROM [PersonEntity] AS [p]

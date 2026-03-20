@@ -1,4 +1,4 @@
-SELECT CASE
+﻿SELECT CASE
     WHEN [p].[Id] < 0 THEN 0
     ELSE [p].[Id]
 END AS [Id], COALESCE([p].[FirstName], N'') + N' ' + COALESCE([p].[LastName], N'') AS [FullName]

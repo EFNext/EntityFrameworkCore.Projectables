@@ -1,0 +1,2 @@
+﻿SELECT 4
+FROM [Concrete] AS [c]

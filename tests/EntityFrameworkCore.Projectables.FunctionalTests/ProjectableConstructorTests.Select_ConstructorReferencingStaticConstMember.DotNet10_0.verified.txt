@@ -1,2 +1,2 @@
-SELECT COALESCE([p].[FirstName], N'') + N' - ' + COALESCE([p].[LastName], N'') AS [FullName]
+﻿SELECT COALESCE([p].[FirstName], N'') + N' - ' + COALESCE([p].[LastName], N'') AS [FullName]
 FROM [PersonEntity] AS [p]

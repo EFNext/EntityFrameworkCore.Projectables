@@ -1,0 +1,3 @@
+﻿SELECT [c].[Id]
+FROM [BaseProvider] AS [b]
+INNER JOIN [Concrete] AS [c] ON [b].[Id] = [c].[BaseProviderId]
