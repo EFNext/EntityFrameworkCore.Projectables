@@ -324,7 +324,7 @@ namespace EntityFrameworkCore.Projectables.Services
                 expressionFactoryMethod = expressionFactoryMethod.MakeGenericMethod(methodGenericArgs);
             }
 
-            return (LambdaExpression)expressionFactoryMethod.Invoke(null, null)!;
+            return expressionFactoryMethod.Invoke(null, null) as LambdaExpression;
         }
 
         /// <summary>
