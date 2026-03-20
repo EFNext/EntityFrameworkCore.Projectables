@@ -4,7 +4,6 @@
 /// Tests for <see cref="FactoryMethodToCtorCodeFixProvider"/> (EFP0012).
 /// Verifies the code fix output via Verify.Xunit snapshots.
 /// </summary>
-[UsesVerify]
 public class FactoryMethodToCtorCodeFixProviderTests : CodeFixTestBase
 {
     private readonly static FactoryMethodToCtorCodeFixProvider _provider = new();

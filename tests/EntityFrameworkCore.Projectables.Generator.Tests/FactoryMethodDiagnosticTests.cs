@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using Microsoft.CodeAnalysis;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace EntityFrameworkCore.Projectables.Generator.Tests;
 
@@ -41,7 +40,7 @@ namespace Foo {
         Assert.Equal("EFP0012", diag.Id);
         Assert.Equal(DiagnosticSeverity.Info, diag.Severity);
         Assert.Equal("Create", diag.Location.SourceTree!
-            .GetRoot().FindToken(diag.Location.SourceSpan.Start).ValueText);
+            .GetRoot(TestContext.Current.CancellationToken).FindToken(diag.Location.SourceSpan.Start).ValueText);
     }
 
     [Fact]

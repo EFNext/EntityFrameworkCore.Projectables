@@ -7,7 +7,6 @@ using Xunit;
 
 namespace EntityFrameworkCore.Projectables.FunctionalTests.BlockBodiedMethods
 {
-    [UsesVerify]
     public class BlockBodiedMethodTests
     {
         public record Entity

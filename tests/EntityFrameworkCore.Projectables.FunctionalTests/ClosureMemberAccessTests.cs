@@ -39,7 +39,6 @@ namespace EntityFrameworkCore.Projectables.FunctionalTests;
 ///   7. Closure capturing an <c>IEnumerable&lt;Entity&gt;</c> field holding an EF query – GetValue() is called
 ///      because IEnumerable&lt;T&gt; satisfies the type gate; runtime value is IQueryable, so the subquery is inlined
 /// </summary>
-[UsesVerify]
 public class ClosureMemberAccessTests
 {
     public record Entity

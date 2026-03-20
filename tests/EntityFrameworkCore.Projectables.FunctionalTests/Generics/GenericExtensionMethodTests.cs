@@ -10,7 +10,6 @@ using Xunit;
 
 namespace EntityFrameworkCore.Projectables.FunctionalTests.Generics
 {
-    [UsesVerify]
     public class GenericFunctionTests
     {
         [Fact]

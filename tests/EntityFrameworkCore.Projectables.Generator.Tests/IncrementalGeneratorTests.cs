@@ -1,7 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace EntityFrameworkCore.Projectables.Generator.Tests;
 
@@ -63,8 +62,8 @@ namespace Foo {
 }";
 
         // ── Initial compilation (two source files) ───────────────────────────
-        var projectableTree = CSharpSyntaxTree.ParseText(projectableSource);
-        var enumTreeV1 = CSharpSyntaxTree.ParseText(enumSourceV1);
+        var projectableTree = CSharpSyntaxTree.ParseText(projectableSource, cancellationToken: TestContext.Current.CancellationToken);
+        var enumTreeV1 = CSharpSyntaxTree.ParseText(enumSourceV1, cancellationToken: TestContext.Current.CancellationToken);
 
         var references = GetDefaultReferences();
         var compilation1 = CSharpCompilation.Create(
@@ -76,7 +75,7 @@ namespace Foo {
         var (driver, result1) = CreateAndRunGenerator(compilation1);
 
         Assert.Single(result1.GeneratedTrees);
-        var output1 = result1.GeneratedTrees[0].GetText().ToString();
+        var output1 = result1.GeneratedTrees[0].GetText(TestContext.Current.CancellationToken).ToString();
 
         // Initial output must reference the two original enum members only.
         Assert.Contains("Active", output1);
@@ -86,14 +85,14 @@ namespace Foo {
         // ── Updated compilation — only the enum file changes ─────────────────
         // projectableTree is the SAME SyntaxTree reference (unchanged file).
         // Roslyn's ReplaceSyntaxTree keeps all other trees as the same references.
-        var enumTreeV2 = CSharpSyntaxTree.ParseText(enumSourceV2);
+        var enumTreeV2 = CSharpSyntaxTree.ParseText(enumSourceV2, cancellationToken: TestContext.Current.CancellationToken);
         var compilation2 = compilation1.ReplaceSyntaxTree(enumTreeV1, enumTreeV2);
 
         // Reuse the same driver to exercise the incremental caching path.
         var (_, result2) = RunGeneratorWithDriver(driver, compilation2);
 
         Assert.Single(result2.GeneratedTrees);
-        var output2 = result2.GeneratedTrees[0].GetText().ToString();
+        var output2 = result2.GeneratedTrees[0].GetText(TestContext.Current.CancellationToken).ToString();
 
         // The updated output must include the new "Pending" enum member.
         Assert.Contains("Active", output2);
@@ -131,8 +130,8 @@ namespace Foo {
     public enum Status { Active, Inactive }
 }";
 
-        var projectableTree = CSharpSyntaxTree.ParseText(projectableSource);
-        var enumTreeV1 = CSharpSyntaxTree.ParseText(enumSourceV1);
+        var projectableTree = CSharpSyntaxTree.ParseText(projectableSource, cancellationToken: TestContext.Current.CancellationToken);
+        var enumTreeV1 = CSharpSyntaxTree.ParseText(enumSourceV1, cancellationToken: TestContext.Current.CancellationToken);
 
         var references = GetDefaultReferences();
         var compilation1 = CSharpCompilation.Create(
@@ -144,16 +143,16 @@ namespace Foo {
         var (driver, result1) = CreateAndRunGenerator(compilation1);
 
         Assert.Single(result1.GeneratedTrees);
-        var output1 = result1.GeneratedTrees[0].GetText().ToString();
+        var output1 = result1.GeneratedTrees[0].GetText(TestContext.Current.CancellationToken).ToString();
         Assert.Contains("Pending", output1);
 
-        var enumTreeV2 = CSharpSyntaxTree.ParseText(enumSourceV2);
+        var enumTreeV2 = CSharpSyntaxTree.ParseText(enumSourceV2, cancellationToken: TestContext.Current.CancellationToken);
         var compilation2 = compilation1.ReplaceSyntaxTree(enumTreeV1, enumTreeV2);
 
         var (_, result2) = RunGeneratorWithDriver(driver, compilation2);
 
         Assert.Single(result2.GeneratedTrees);
-        var output2 = result2.GeneratedTrees[0].GetText().ToString();
+        var output2 = result2.GeneratedTrees[0].GetText(TestContext.Current.CancellationToken).ToString();
 
         // "Pending" must no longer appear after it is removed from the enum.
         Assert.DoesNotContain("Pending", output2);
@@ -188,18 +187,18 @@ namespace Foo {
         var (driver, result1) = CreateAndRunGenerator(compilation1);
 
         Assert.Single(result1.GeneratedTrees);
-        var output1 = result1.GeneratedTrees[0].GetText().ToString();
+        var output1 = result1.GeneratedTrees[0].GetText(TestContext.Current.CancellationToken).ToString();
         Assert.Contains("* 2", output1);
 
         // Replace the projectable file.
         var treeV1 = compilation1.SyntaxTrees.First();
-        var treeV2 = CSharpSyntaxTree.ParseText(projectableSourceV2);
+        var treeV2 = CSharpSyntaxTree.ParseText(projectableSourceV2, cancellationToken: TestContext.Current.CancellationToken);
         var compilation2 = compilation1.ReplaceSyntaxTree(treeV1, treeV2);
 
         var (_, result2) = RunGeneratorWithDriver(driver, compilation2);
 
         Assert.Single(result2.GeneratedTrees);
-        var output2 = result2.GeneratedTrees[0].GetText().ToString();
+        var output2 = result2.GeneratedTrees[0].GetText(TestContext.Current.CancellationToken).ToString();
 
         Assert.Contains("* 3", output2);
         Assert.NotEqual(output1, output2);
@@ -229,8 +228,8 @@ namespace Foo {
         Assert.Single(result1.GeneratedTrees);
         Assert.Single(result2.GeneratedTrees);
 
-        var output1 = result1.GeneratedTrees[0].GetText().ToString();
-        var output2 = result2.GeneratedTrees[0].GetText().ToString();
+        var output1 = result1.GeneratedTrees[0].GetText(TestContext.Current.CancellationToken).ToString();
+        var output2 = result2.GeneratedTrees[0].GetText(TestContext.Current.CancellationToken).ToString();
 
         Assert.Equal(output1, output2);
     }

@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 namespace EntityFrameworkCore.Projectables.FunctionalTests
 {
 
-    [UsesVerify]
     public class ComplexModelTests
     {
         public class User

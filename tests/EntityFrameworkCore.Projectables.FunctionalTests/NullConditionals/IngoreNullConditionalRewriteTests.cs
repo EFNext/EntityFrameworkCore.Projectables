@@ -9,7 +9,6 @@ using Xunit;
 
 namespace EntityFrameworkCore.Projectables.FunctionalTests.NullConditionals
 {
-    [UsesVerify]
     public class IngoreNullConditionalRewriteTests
     {
         [Fact]

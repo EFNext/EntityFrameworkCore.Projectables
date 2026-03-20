@@ -4,7 +4,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using VerifyXunit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace EntityFrameworkCore.Projectables.Generator.Tests;
 
@@ -12,7 +11,6 @@ namespace EntityFrameworkCore.Projectables.Generator.Tests;
 /// Tests for [Projectable(UseMemberBody = ...)] — both valid cases (code is generated correctly)
 /// and invalid cases (EFP0010 / EFP0011 diagnostics are emitted).
 /// </summary>
-[UsesVerify]
 public class UseMemberBodyTests : ProjectionExpressionGeneratorTestsBase
 {
     public UseMemberBodyTests(ITestOutputHelper testOutputHelper) : base(testOutputHelper) { }

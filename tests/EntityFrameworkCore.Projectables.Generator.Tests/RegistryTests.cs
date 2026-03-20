@@ -1,8 +1,6 @@
-using Xunit.Abstractions;
 
 namespace EntityFrameworkCore.Projectables.Generator.Tests;
 
-[UsesVerify]
 public class RegistryTests : ProjectionExpressionGeneratorTestsBase
 {
     public RegistryTests(ITestOutputHelper testOutputHelper) : base(testOutputHelper) { }
@@ -32,7 +30,7 @@ namespace Foo {
 }");
         var result = RunGenerator(compilation);
 
-        return Verifier.Verify(result.RegistryTree!.GetText().ToString());
+        return Verifier.Verify(result.RegistryTree!.GetText(TestContext.Current.CancellationToken).ToString());
     }
 
     [Fact]
@@ -49,7 +47,7 @@ namespace Foo {
 }");
         var result = RunGenerator(compilation);
 
-        return Verifier.Verify(result.RegistryTree!.GetText().ToString());
+        return Verifier.Verify(result.RegistryTree!.GetText(TestContext.Current.CancellationToken).ToString());
     }
 
     [Fact]
@@ -68,7 +66,7 @@ namespace Foo {
 }");
         var result = RunGenerator(compilation);
 
-        return Verifier.Verify(result.RegistryTree!.GetText().ToString());
+        return Verifier.Verify(result.RegistryTree!.GetText(TestContext.Current.CancellationToken).ToString());
     }
 
     [Fact]
@@ -104,7 +102,7 @@ namespace Foo {
 }");
         var result = RunGenerator(compilation);
 
-        return Verifier.Verify(result.RegistryTree!.GetText().ToString());
+        return Verifier.Verify(result.RegistryTree!.GetText(TestContext.Current.CancellationToken).ToString());
     }
 
     [Fact]
@@ -121,7 +119,7 @@ namespace Foo {
 }");
         var result = RunGenerator(compilation);
 
-        return Verifier.Verify(result.RegistryTree!.GetText().ToString());
+        return Verifier.Verify(result.RegistryTree!.GetText(TestContext.Current.CancellationToken).ToString());
     }
 
     [Fact]
@@ -140,6 +138,6 @@ namespace Foo {
 }");
         var result = RunGenerator(compilation);
 
-        return Verifier.Verify(result.RegistryTree!.GetText().ToString());
+        return Verifier.Verify(result.RegistryTree!.GetText(TestContext.Current.CancellationToken).ToString());
     }
 }
