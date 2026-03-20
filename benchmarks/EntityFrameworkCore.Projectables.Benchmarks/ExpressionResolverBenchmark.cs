@@ -22,6 +22,9 @@ namespace EntityFrameworkCore.Projectables.Benchmarks
 
         private static readonly MemberInfo _methodWithParamMember =
             typeof(TestEntity).GetMethod(nameof(TestEntity.IdPlusDelta), new[] { typeof(int) })!;
+        
+        private static readonly MemberInfo _copyConstructorMember = 
+            typeof(TestEntity).GetConstructor(new[] { typeof(TestEntity) })!;
 
         private readonly ProjectionExpressionResolver _resolver = new();
 
@@ -39,6 +42,10 @@ namespace EntityFrameworkCore.Projectables.Benchmarks
         public LambdaExpression? ResolveMethodWithParam_Registry()
             => _resolver.FindGeneratedExpression(_methodWithParamMember);
 
+        [Benchmark]
+        public LambdaExpression? ResolveCopyConstructor_Registry()
+            => _resolver.FindGeneratedExpression(_copyConstructorMember);
+
         // ── Reflection path ───────────────────────────────────────────────────
 
         [Benchmark]
@@ -52,5 +59,9 @@ namespace EntityFrameworkCore.Projectables.Benchmarks
         [Benchmark]
         public LambdaExpression? ResolveMethodWithParam_Reflection()
             => ProjectionExpressionResolver.FindGeneratedExpressionViaReflection(_methodWithParamMember);
+        
+        [Benchmark]
+        public LambdaExpression? ResolveCopyConstructor_Reflection()
+            => ProjectionExpressionResolver.FindGeneratedExpressionViaReflection(_copyConstructorMember);
     }
 }
