@@ -1,0 +1,59 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <!-- Background gradient: violet → deep indigo -->
+    <linearGradient id="bg" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#6d28d9"/>
+      <stop offset="100%" stop-color="#312e81"/>
+    </linearGradient>
+
+    <!-- Top glass highlight -->
+    <linearGradient id="glassTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="white" stop-opacity="0.13"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Centre radial glow behind => -->
+    <radialGradient id="centreGlow" cx="100" cy="100" r="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#a78bfa" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- ── Background ── -->
+  <rect width="200" height="200" rx="36" fill="url(#bg)"/>
+
+  <!-- Glass sheen on upper half -->
+  <rect width="200" height="100" rx="36" fill="url(#glassTop)"/>
+  <!-- Mask lower-rounded corners of the sheen rect -->
+  <rect y="68" width="200" height="32" fill="#6d28d9"/>
+  <rect width="200" height="200" rx="36" fill="url(#bg)" fill-opacity="0"/>
+
+  <!-- Centre glow -->
+  <circle cx="100" cy="100" r="58" fill="url(#centreGlow)"/>
+
+  <!-- ── [ bracket (left) ── -->
+  <!-- vertical bar -->
+  <rect x="22" y="52" width="10" height="96" rx="3" fill="#c4b5fd"/>
+  <!-- top serif -->
+  <rect x="22" y="52" width="27" height="10" rx="3" fill="#c4b5fd"/>
+  <!-- bottom serif -->
+  <rect x="22" y="138" width="27" height="10" rx="3" fill="#c4b5fd"/>
+
+  <!-- ── ] bracket (right) ── -->
+  <!-- vertical bar -->
+  <rect x="168" y="52" width="10" height="96" rx="3" fill="#c4b5fd"/>
+  <!-- top serif -->
+  <rect x="151" y="52" width="27" height="10" rx="3" fill="#c4b5fd"/>
+  <!-- bottom serif -->
+  <rect x="151" y="138" width="27" height="10" rx="3" fill="#c4b5fd"/>
+
+  <!-- ── = (two horizontal bars) ── -->
+  <rect x="55" y="85" width="58" height="11" rx="5.5" fill="white"/>
+  <rect x="55" y="104" width="58" height="11" rx="5.5" fill="white"/>
+
+  <!-- ── > (chevron) ── -->
+  <path d="M119 81 L149 100 L119 119"
+        stroke="white" stroke-width="11.5"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+

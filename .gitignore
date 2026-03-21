@@ -366,3 +366,7 @@ FodyWeavers.xsd
 *.received.*
 
 .idea
+
+# Docs
+/docs/.vitepress/cache/
+/docs/.vitepress/dist/

@@ -1,0 +1,98 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#5b21b6"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <linearGradient id="glassTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="white" stop-opacity="0.09"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="leftGlow" cx="340" cy="315" r="240" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#7c3aed" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="rightGlow" cx="860" cy="315" r="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#4338ca" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#4338ca" stop-opacity="0"/>
+    </radialGradient>
+    <!-- subtle dot grid pattern -->
+    <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="20" cy="20" r="1.2" fill="white" fill-opacity="0.07"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#dots)"/>
+  <rect width="1200" height="315" fill="url(#glassTop)"/>
+
+  <!-- Ambient glows -->
+  <circle cx="340" cy="315" r="240" fill="url(#leftGlow)"/>
+  <circle cx="860" cy="315" r="200" fill="url(#rightGlow)"/>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!--  LOGO MARK  (centred left, ~x=100-460) -->
+  <!-- ═══════════════════════════════════════ -->
+  <g transform="translate(96, 155) scale(1.6)">
+    <!-- [ bracket -->
+    <rect x="22"  y="52"  width="10" height="96" rx="3" fill="#c4b5fd"/>
+    <rect x="22"  y="52"  width="27" height="10" rx="3" fill="#c4b5fd"/>
+    <rect x="22"  y="138" width="27" height="10" rx="3" fill="#c4b5fd"/>
+    <!-- ] bracket -->
+    <rect x="168" y="52"  width="10" height="96" rx="3" fill="#c4b5fd"/>
+    <rect x="151" y="52"  width="27" height="10" rx="3" fill="#c4b5fd"/>
+    <rect x="151" y="138" width="27" height="10" rx="3" fill="#c4b5fd"/>
+    <!-- = bars -->
+    <rect x="55"  y="85"  width="58" height="11" rx="5.5" fill="white"/>
+    <rect x="55"  y="104" width="58" height="11" rx="5.5" fill="white"/>
+    <!-- > chevron -->
+    <path d="M119 81 L149 100 L119 119"
+          stroke="white" stroke-width="11.5"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Vertical separator -->
+  <rect x="510" y="100" width="1.5" height="430" rx="1" fill="white" fill-opacity="0.12"/>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!--  TEXT  (right of separator)            -->
+  <!-- ═══════════════════════════════════════ -->
+
+  <!-- Title -->
+  <text x="564" y="240"
+        font-family="'Segoe UI', system-ui, -apple-system, sans-serif"
+        font-size="72" font-weight="700" fill="white" letter-spacing="-1">
+    EF Core
+  </text>
+  <text x="564" y="328"
+        font-family="'Segoe UI', system-ui, -apple-system, sans-serif"
+        font-size="72" font-weight="700" fill="#a78bfa" letter-spacing="-1">
+    Projectables
+  </text>
+
+  <!-- Tagline -->
+  <text x="566" y="396"
+        font-family="'Segoe UI', system-ui, -apple-system, sans-serif"
+        font-size="28" font-weight="400" fill="#c4b5fd" letter-spacing="0.2">
+    Flexible projection magic for EF Core
+  </text>
+
+  <!-- Pills: packages -->
+  <rect x="566" y="440" width="264" height="42" rx="21"
+        fill="white" fill-opacity="0.08" stroke="#a78bfa" stroke-width="1.2"/>
+  <text x="698" y="467"
+        font-family="'Segoe UI', system-ui, -apple-system, sans-serif"
+        font-size="20" fill="#e9d5ff" text-anchor="middle">
+    [Projectable]
+  </text>
+
+  <rect x="848" y="440" width="160" height="42" rx="21"
+        fill="white" fill-opacity="0.08" stroke="#818cf8" stroke-width="1.2"/>
+  <text x="928" y="467"
+        font-family="'Segoe UI', system-ui, -apple-system, sans-serif"
+        font-size="20" fill="#c7d2fe" text-anchor="middle">
+    EF Core 6+
+  </text>
+</svg>
+

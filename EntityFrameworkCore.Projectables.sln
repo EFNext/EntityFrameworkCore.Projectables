@@ -51,6 +51,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 	ProjectSection(SolutionItems) = preProject
 		.github\workflows\build.yml = .github\workflows\build.yml
 		.github\workflows\release.yml = .github\workflows\release.yml
+		.github\workflows\docs.yml = .github\workflows\docs.yml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EntityFrameworkCore.Projectables.CodeFixes", "src\EntityFrameworkCore.Projectables.CodeFixes\EntityFrameworkCore.Projectables.CodeFixes.csproj", "{1890C6AF-37A4-40B0-BD0C-7FB18357891A}"

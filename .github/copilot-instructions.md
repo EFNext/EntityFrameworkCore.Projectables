@@ -10,13 +10,15 @@
 src/
   EntityFrameworkCore.Projectables.Abstractions/   # [Projectable] attribute, enums
   EntityFrameworkCore.Projectables.Generator/      # Roslyn IIncrementalGenerator
+  EntityFrameworkCore.Projectables.CodeFixes/      # Roslyn code fix providers (EFP0001/0002/0008/0012)
   EntityFrameworkCore.Projectables/                # Runtime library (EF Core integration)
 tests/
-  EntityFrameworkCore.Projectables.Generator.Tests/   # Roslyn generator unit tests (Verify snapshots)
-  EntityFrameworkCore.Projectables.FunctionalTests/   # End-to-end EF Core tests (Verify snapshots)
-  EntityFrameworkCore.Projectables.Tests/             # Misc unit tests
-benchmarks/                                           # BenchmarkDotNet benchmarks
-samples/                                              # Readme sample project
+  EntityFrameworkCore.Projectables.Generator.Tests/    # Roslyn generator unit tests (Verify snapshots)
+  EntityFrameworkCore.Projectables.CodeFixes.Tests/    # Code fix unit tests (Verify snapshots)
+  EntityFrameworkCore.Projectables.FunctionalTests/    # End-to-end EF Core tests (Verify snapshots)
+  EntityFrameworkCore.Projectables.Tests/              # Misc unit tests
+benchmarks/                                            # BenchmarkDotNet benchmarks
+samples/                                               # Readme sample project
 ```
 
 ---
@@ -233,7 +235,7 @@ $env:VERIFY_AUTO_APPROVE = "true"; dotnet test
 | `ProjectableDescriptor.cs`                 | Pure data record describing a projectable member                                   |
 | `ProjectableAttributeData.cs`              | Serializable snapshot of `[Projectable]` attribute values (no live Roslyn objects) |
 | `ProjectionRegistryEmitter.cs`             | Emits `ProjectionRegistry.g.cs`                                                    |
-| `Diagnostics.cs`                           | All `DiagnosticDescriptor` constants (EFP0001–EFP0009)                             |
+| `Diagnostics.cs`                           | All `DiagnosticDescriptor` constants (EFP0001–EFP0012)                             |
 
 ### Incremental generator rules
 - **Never capture live Roslyn objects** (`ISymbol`, `SemanticModel`, `Compilation`, `AttributeData`) in the incremental pipeline transforms — they break caching. Use `ProjectableAttributeData` (a plain struct) instead.
@@ -243,15 +245,20 @@ $env:VERIFY_AUTO_APPROVE = "true"; dotnet test
 
 ## Diagnostics Reference
 
-| ID      | Severity | Title                                              |
-|---------|----------|----------------------------------------------------|
-| EFP0001 | Warning  | Block-bodied member support is experimental        |
-| EFP0002 | Error    | Null-conditional expression unsupported            |
-| EFP0003 | Warning  | Unsupported statement in block-bodied method       |
-| EFP0004 | Error    | Statement with side effects in block-bodied method |
-| EFP0005 | Warning  | Potential side effect in block-bodied method       |
-| EFP0006 | Error    | Method/property should expose a body definition    |
-| EFP0007 | Warning  | Non-projectable method call in block body          |
+| ID      | Severity | Title                                                          | Code Fix                                                  |
+|---------|----------|----------------------------------------------------------------|-----------------------------------------------------------|
+| EFP0001 | Warning  | Block-bodied member support is experimental                    | Add `AllowBlockBody = true` to `[Projectable]`            |
+| EFP0002 | Error    | Null-conditional expression not configured                     | Configure `NullConditionalRewriteSupport`                 |
+| EFP0003 | Warning  | Unsupported statement in block-bodied method                   | —                                                         |
+| EFP0004 | Error    | Statement with side effects in block-bodied method             | —                                                         |
+| EFP0005 | Warning  | Potential side effect in block-bodied method                   | —                                                         |
+| EFP0006 | Error    | Method or property should expose a body definition             | —                                                         |
+| EFP0007 | Error    | Unsupported pattern in projectable expression                  | —                                                         |
+| EFP0008 | Error    | Target class is missing a parameterless constructor            | Add parameterless constructor to the class                |
+| EFP0009 | Error    | Delegated constructor cannot be analyzed for projection        | —                                                         |
+| EFP0010 | Error    | UseMemberBody target member not found                          | —                                                         |
+| EFP0011 | Error    | UseMemberBody target member is incompatible                    | —                                                         |
+| EFP0012 | Info     | [Projectable] factory method can be converted to a constructor | Convert to `[Projectable]` constructor (+ update callers) |
 
 ---
 
@@ -277,6 +284,43 @@ $env:VERIFY_AUTO_APPROVE = "true"; dotnet test
 - Don't use `Thread.CurrentThread.CurrentCulture` — use `CultureInfo.DefaultThreadCurrentCulture` in module initializers
 - Don't write tests that rely on a specific OS locale (culture is forced to `en-US` in test initializers)
 - Don't add new packages without updating `Directory.Packages.props` with a `<PackageVersion>` entry
+
+---
+
+## Documentation & README
+
+### When to update `README.md`
+
+- A user-facing feature is added, changed, or removed — keep the **feature table** current
+- Supported EF Core / .NET versions change
+- NuGet package names or the "Getting started" steps change
+
+### When to update `docs/`
+
+The docs site is a **VitePress** project (`docs/`). Run it locally with:
+
+```bash
+cd docs
+npm install   # first time only
+npm run dev
+```
+
+Update the relevant page(s) in `docs/` whenever:
+
+- A feature's behavior changes — edit the corresponding guide or reference page
+- A new doc page is added or an existing one is removed — **also update the sidebar** in `docs/.vitepress/config.mts`
+- Package installation or `UseProjectables()` API changes — update `docs/guide/quickstart.md`
+
+### Doc structure
+
+| Folder            | Content                                              |
+|-------------------|------------------------------------------------------|
+| `docs/guide/`     | Getting-started guides (quickstart, core concepts)   |
+| `docs/reference/` | Attribute reference, diagnostics, compatibility mode |
+| `docs/advanced/`  | Internals, block-bodied members, limitations         |
+| `docs/recipes/`   | End-to-end usage examples                            |
+
+The VitePress sidebar is declared in `docs/.vitepress/config.mts` — keep it in sync with actual files.
 
 ---
 
