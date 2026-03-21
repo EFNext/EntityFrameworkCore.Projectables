@@ -51,8 +51,9 @@ static internal partial class ProjectableInterpreter
             expandEnumMethods,
             semanticModel,
             context,
-            extensionParameter?.Name);
-        var declarationSyntaxRewriter = new DeclarationSyntaxRewriter(semanticModel);
+            extensionParameter?.Name,
+            owningMethod: memberSymbol as IMethodSymbol);
+        var declarationSyntaxRewriter = new DeclarationSyntaxRewriter(semanticModel, context);
 
         // 4. Build base descriptor (class names, namespaces, @this parameter, target class)
         var methodSymbol = memberSymbol as IMethodSymbol;

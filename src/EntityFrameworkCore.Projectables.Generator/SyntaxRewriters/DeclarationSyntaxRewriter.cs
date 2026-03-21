@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using EntityFrameworkCore.Projectables.Generator.Infrastructure;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -7,10 +8,12 @@ namespace EntityFrameworkCore.Projectables.Generator.SyntaxRewriters;
 internal class DeclarationSyntaxRewriter : CSharpSyntaxRewriter
 {
     readonly SemanticModel _semanticModel;
+    readonly SourceProductionContext _context;
 
-    public DeclarationSyntaxRewriter(SemanticModel semanticModel)
+    public DeclarationSyntaxRewriter(SemanticModel semanticModel, SourceProductionContext context)
     {
         _semanticModel = semanticModel;
+        _context = context;
     }
 
     public override SyntaxNode? VisitParameter(ParameterSyntax node)
@@ -37,6 +40,20 @@ internal class DeclarationSyntaxRewriter : CSharpSyntaxRewriter
             if (visitedParameterSyntax.Default is not null)
             {
                 visitedNode = ((ParameterSyntax)visitedNode).WithDefault(null);
+            }
+
+            // Ref-like types (Span<T>, ReadOnlySpan<T>, etc.) cannot be lambda parameters in expression trees.
+            if (node.Type is { } paramTypeSyntax)
+            {
+                var paramTypeInfo = _semanticModel.GetTypeInfo(paramTypeSyntax);
+                if (paramTypeInfo.Type is INamedTypeSymbol { IsRefLikeType: true } refLikeType)
+                {
+                    _context.ReportDiagnostic(Diagnostic.Create(
+                        Diagnostics.UnsupportedExpressionInProjectable,
+                        node.GetLocation(),
+                        refLikeType.ToDisplayString(),
+                        $"Ref-like types cannot be used as parameters in expression trees."));
+                }
             }
         }
 

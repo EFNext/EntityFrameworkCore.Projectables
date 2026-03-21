@@ -99,4 +99,12 @@ static internal class Diagnostics
         category: "Design",
         DiagnosticSeverity.Info,
         isEnabledByDefault: true);
+
+    public readonly static DiagnosticDescriptor UnsupportedExpressionInProjectable = new DiagnosticDescriptor(
+        id: "EFP0013",
+        title: "Unsupported expression in projectable member",
+        messageFormat: "The expression '{0}' cannot be used in a projectable member: {1}",
+        category: "Design",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 }

@@ -1,3 +1,4 @@
+using EntityFrameworkCore.Projectables.Generator.Infrastructure;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -14,8 +15,15 @@ internal partial class ExpressionSyntaxRewriter : CSharpSyntaxRewriter
     readonly SourceProductionContext _context;
     readonly Stack<(ExpressionSyntax Expression, ITypeSymbol? Type)> _conditionalAccessExpressionsStack = new();
     readonly string? _extensionParameterName;
+    /// <summary>
+    /// The symbol of the member being projected. When set, constructor parameters that belong
+    /// to this symbol are considered valid (they will become lambda parameters in the generated
+    /// expression tree). Parameters from any other constructor — e.g. a primary constructor
+    /// referenced from a property body — are flagged as unsupported.
+    /// </summary>
+    readonly IMethodSymbol? _owningMethod;
 
-    public ExpressionSyntaxRewriter(INamedTypeSymbol targetTypeSymbol, NullConditionalRewriteSupport nullConditionalRewriteSupport, bool expandEnumMethods, SemanticModel semanticModel, SourceProductionContext context, string? extensionParameterName = null)
+    public ExpressionSyntaxRewriter(INamedTypeSymbol targetTypeSymbol, NullConditionalRewriteSupport nullConditionalRewriteSupport, bool expandEnumMethods, SemanticModel semanticModel, SourceProductionContext context, string? extensionParameterName = null, IMethodSymbol? owningMethod = null)
     {
         _targetTypeSymbol = targetTypeSymbol;
         _nullConditionalRewriteSupport = nullConditionalRewriteSupport;
@@ -23,9 +31,23 @@ internal partial class ExpressionSyntaxRewriter : CSharpSyntaxRewriter
         _semanticModel = semanticModel;
         _context = context;
         _extensionParameterName = extensionParameterName;
+        _owningMethod = owningMethod;
     }
 
     public SemanticModel GetSemanticModel() => _semanticModel;
+
+    public override SyntaxNode? VisitFieldExpression(FieldExpressionSyntax node)
+    {
+        // `field` keyword (C# 14) accesses the compiler-synthesised backing field.
+        // Expression trees have no way to represent this — report EFP0013.
+        _context.ReportDiagnostic(Diagnostic.Create(
+            Diagnostics.UnsupportedExpressionInProjectable,
+            node.GetLocation(),
+            "field",
+            "The 'field' keyword (C# 14 backing field accessor) is not supported in expression trees."));
+        return SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression,
+            SyntaxFactory.Token(SyntaxKind.DefaultKeyword));
+    }
 
     private SyntaxNode? VisitThisBaseExpression(CSharpSyntaxNode node)
     {
@@ -139,6 +161,24 @@ internal partial class ExpressionSyntaxRewriter : CSharpSyntaxRewriter
         var identifierSymbol = _semanticModel.GetSymbolInfo(node).Symbol;
         if (identifierSymbol is not null)
         {
+            // Primary constructor parameters are not in scope in the generated static method (C# 12+).
+            // Exception: parameters that belong to the constructor being projected are valid — they
+            // become lambda parameters in the generated expression tree. We detect this by checking
+            // whether identifierSymbol is one of _owningMethod's own parameters (comparing the
+            // parameter symbol directly avoids symbol-equality pitfalls with the containing method).
+            if (identifierSymbol is IParameterSymbol { ContainingSymbol: IMethodSymbol { MethodKind: MethodKind.Constructor } }
+                && !(_owningMethod is not null && _owningMethod.Parameters.Any(p => SymbolEqualityComparer.Default.Equals(p, identifierSymbol))))
+            {
+                _context.ReportDiagnostic(Diagnostic.Create(
+                    Diagnostics.UnsupportedExpressionInProjectable,
+                    node.GetLocation(),
+                    node.Identifier.Text,
+                    "Primary constructor parameters are not accessible in the generated expression tree. " +
+                    "Capture the value in a property or field instead."));
+                return SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression,
+                    SyntaxFactory.Token(SyntaxKind.DefaultKeyword));
+            }
+
             var operation = node switch { { Parent: { } parent } when parent.IsKind(SyntaxKind.InvocationExpression) => _semanticModel.GetOperation(node.Parent),
                 _ => _semanticModel.GetOperation(node!)
             };
@@ -309,5 +349,46 @@ internal partial class ExpressionSyntaxRewriter : CSharpSyntaxRewriter
         // triggered by leaving raw pattern-matching syntax inside an expression tree.
         return ConvertPatternToExpression(node.Pattern, expression)
             ?? SyntaxFactory.LiteralExpression(SyntaxKind.FalseLiteralExpression);
+    }
+
+    public override SyntaxNode? VisitCollectionExpression(CollectionExpressionSyntax node)
+    {
+        // Collection expressions (C# 12) are not supported in expression trees.
+        _context.ReportDiagnostic(Diagnostic.Create(
+            Diagnostics.UnsupportedExpressionInProjectable,
+            node.GetLocation(),
+            node.ToString(),
+            "Collection expressions are not supported in expression trees."));
+        return SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression,
+            SyntaxFactory.Token(SyntaxKind.DefaultKeyword));
+    }
+
+    public override SyntaxNode? VisitPrefixUnaryExpression(PrefixUnaryExpressionSyntax node)
+    {
+        if (node.IsKind(SyntaxKind.IndexExpression))
+        {
+            // Index-from-end operator (^n, C# 8+) is not supported in expression trees.
+            _context.ReportDiagnostic(Diagnostic.Create(
+                Diagnostics.UnsupportedExpressionInProjectable,
+                node.GetLocation(),
+                node.ToString(),
+                "The index-from-end operator (^) is not supported in expression trees."));
+            return SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression,
+                SyntaxFactory.Token(SyntaxKind.DefaultKeyword));
+        }
+
+        return base.VisitPrefixUnaryExpression(node);
+    }
+
+    public override SyntaxNode? VisitRangeExpression(RangeExpressionSyntax node)
+    {
+        // Range expressions (a..b, C# 8+) are not supported in expression trees.
+        _context.ReportDiagnostic(Diagnostic.Create(
+            Diagnostics.UnsupportedExpressionInProjectable,
+            node.GetLocation(),
+            node.ToString(),
+            "The range operator (..) is not supported in expression trees."));
+        return SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression,
+            SyntaxFactory.Token(SyntaxKind.DefaultKeyword));
     }
 }
