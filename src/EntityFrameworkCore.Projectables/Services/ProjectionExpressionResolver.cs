@@ -199,43 +199,52 @@ namespace EntityFrameworkCore.Projectables.Services
         }
 
         /// <summary>
-        /// Sentinel stored in <see cref="_reflectionFactoryCache"/> to represent
+        /// Sentinel stored in <see cref="_reflectionCache"/> to represent
         /// "no generated type found for this member", distinguishing it from a not-yet-populated entry.
         /// <see cref="ConcurrentDictionary{TKey,TValue}"/> does not allow null values, so a sentinel is required.
         /// </summary>
-        private readonly static Func<LambdaExpression> _reflectionNotFoundSentinel = static () => null!;
+        private readonly static LambdaExpression _reflectionNullSentinel =
+            Expression.Lambda(Expression.Empty());
 
         /// <summary>
-        /// Caches a pre-compiled <c>Func&lt;LambdaExpression&gt;</c> delegate per <see cref="MemberInfo"/>
-        /// so that <c>Assembly.GetType</c>, <c>GetMethod</c>, <c>MakeGenericType</c>, and
-        /// <c>MakeGenericMethod</c> are only paid once per member. All subsequent calls execute
-        /// native JIT-compiled code with zero reflection overhead.
+        /// Caches the fully-resolved <see cref="LambdaExpression"/> per <see cref="MemberInfo"/>
+        /// for the reflection-based slow path.
+        /// On the first call per member the reflection work (<c>Assembly.GetType</c>, <c>GetMethod</c>,
+        /// <c>MakeGenericType</c>, <c>MakeGenericMethod</c>) is performed once and the resulting
+        /// expression tree is stored here; subsequent calls return the cached reference directly,
+        /// eliminating expression-tree re-construction on every access.
+        /// This is especially important for constructors whose object-initializer trees are
+        /// significantly more expensive to build than simple method-body trees.
         /// </summary>
-        private readonly static ConcurrentDictionary<MemberInfo, Func<LambdaExpression>> _reflectionFactoryCache = new();
+        private readonly static ConcurrentDictionary<MemberInfo, LambdaExpression> _reflectionCache = new();
 
         /// <summary>
         /// Resolves the <see cref="LambdaExpression"/> for a <c>[Projectable]</c> member using the
         /// reflection-based slow path only, bypassing the static registry.
-        /// Useful for benchmarking and for members not yet in the registry (e.g. open-generic types).
+        /// The result is cached after the first call, so subsequent calls return the cached expression
+        /// without any reflection or expression-tree construction overhead.
+        /// Useful for members not yet in the registry (e.g. open-generic types).
         /// </summary>
         public static LambdaExpression? FindGeneratedExpressionViaReflection(MemberInfo projectableMemberInfo)
         {
-            var factory = _reflectionFactoryCache.GetOrAdd(projectableMemberInfo, static mi => BuildReflectionFactory(mi));
-            return ReferenceEquals(factory, _reflectionNotFoundSentinel) ? null : factory.Invoke();
+            var result = _reflectionCache.GetOrAdd(projectableMemberInfo,
+                static mi => BuildReflectionExpression(mi) ?? _reflectionNullSentinel);
+            return ReferenceEquals(result, _reflectionNullSentinel) ? null : result;
         }
 
         /// <summary>
-        /// Performs the one-time reflection work for a member and returns a compiled native delegate
-        /// (or <see cref="_reflectionNotFoundSentinel"/> if no generated type exists).
+        /// Performs the one-time reflection work for a member: locates the generated expression
+        /// accessor (inline or external-class path), invokes it, and returns the resulting
+        /// <see cref="LambdaExpression"/>. Returns <c>null</c> if no generated type is found.
         /// <para>
-        /// We use <c>Expression.Lambda&lt;TDelegate&gt;(...).Compile()</c> rather than
-        /// <c>Delegate.CreateDelegate</c> because the generated <c>Expression()</c> factory method
-        /// returns <c>Expression&lt;TDelegate&gt;</c> (a subtype of <see cref="LambdaExpression"/>), and
-        /// <c>CreateDelegate</c> requires an exact return-type match in most runtime environments.
-        /// The expression-tree wrapper handles the covariant cast cleanly and compiles to native code.
+        /// Using <c>MethodInfo.Invoke</c> rather than a compiled delegate is appropriate here because
+        /// the result is cached in <see cref="_reflectionCache"/> — the invocation cost is paid only
+        /// on cache misses, and subsequent EF Core queries reuse the cached expression. Under
+        /// contention the value factory may be invoked more than once, but only a single expression
+        /// instance is ultimately stored per member.
         /// </para>
         /// </summary>
-        private static Func<LambdaExpression> BuildReflectionFactory(MemberInfo projectableMemberInfo)
+        private static LambdaExpression? BuildReflectionExpression(MemberInfo projectableMemberInfo)
         {
             var declaringType = projectableMemberInfo.DeclaringType
                 ?? throw new InvalidOperationException("Expected a valid type here");
@@ -295,7 +304,7 @@ namespace EntityFrameworkCore.Projectables.Services
 
             if (expressionFactoryType is null)
             {
-                return _reflectionNotFoundSentinel;
+                return null;
             }
 
             if (expressionFactoryType.IsGenericTypeDefinition)
@@ -307,7 +316,7 @@ namespace EntityFrameworkCore.Projectables.Services
 
             if (expressionFactoryMethod is null)
             {
-                return _reflectionNotFoundSentinel;
+                return null;
             }
 
             if (projectableMemberInfo is MethodInfo mi && mi.GetGenericArguments() is { Length: > 0 } methodGenericArgs)
@@ -315,12 +324,7 @@ namespace EntityFrameworkCore.Projectables.Services
                 expressionFactoryMethod = expressionFactoryMethod.MakeGenericMethod(methodGenericArgs);
             }
 
-            // Compile a native delegate: () => (LambdaExpression)GeneratedClass.Expression()
-            // Expression.Call + Convert handles the covariant return type (Expression<TDelegate> → LambdaExpression).
-            // The one-time Compile() cost is amortized; all subsequent calls are direct native-code invocations.
-            var call = Expression.Call(expressionFactoryMethod);
-            var cast = Expression.Convert(call, typeof(LambdaExpression));
-            return Expression.Lambda<Func<LambdaExpression>>(cast).Compile();
+            return expressionFactoryMethod.Invoke(null, null) as LambdaExpression;
         }
 
         /// <summary>

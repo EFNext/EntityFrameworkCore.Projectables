@@ -1,0 +1,4 @@
+﻿SELECT [e].[Id], [e0].[Id] + 1, [e0].[Id]
+FROM [Entity] AS [e]
+LEFT JOIN [Entity] AS [e0] ON [e].[Id] = [e0].[EntityId]
+ORDER BY [e].[Id]

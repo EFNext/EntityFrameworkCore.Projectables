@@ -10,7 +10,6 @@ namespace EntityFrameworkCore.Projectables.FunctionalTests.BlockBodiedMethods
     /// <summary>
     /// Tests for calling projectable methods from within block-bodied methods
     /// </summary>
-    [UsesVerify]
     public class BlockBodyProjectableCallTests
     {
         public record Entity

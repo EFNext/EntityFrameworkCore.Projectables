@@ -1,0 +1,3 @@
+﻿SELECT [e].[Id], [e].[Price]
+FROM [Entity] AS [e]
+WHERE [e].[Price] > 1.0E0

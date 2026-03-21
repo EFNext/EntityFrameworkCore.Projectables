@@ -10,7 +10,6 @@ namespace EntityFrameworkCore.Projectables.CodeFixes.Tests;
 /// Tests for <see cref="BlockBodyExperimentalCodeFixProvider"/> (EFP0001).
 /// The fix adds <c>AllowBlockBody = true</c> to the <c>[Projectable]</c> attribute.
 /// </summary>
-[UsesVerify]
 public class BlockBodyExperimentalCodeFixProviderTests : CodeFixTestBase
 {
     private readonly static BlockBodyExperimentalCodeFixProvider _provider = new();

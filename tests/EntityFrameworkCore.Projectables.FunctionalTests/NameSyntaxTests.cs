@@ -19,7 +19,6 @@ namespace EntityFrameworkCore.Projectables.FunctionalTests
         }
     }
     
-    [UsesVerify]
     public class NameSyntaxTests
     {
         public class Entity

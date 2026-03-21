@@ -1,0 +1,5 @@
+﻿DECLARE @__key_0 nvarchar(4000) = N'x';
+
+SELECT [c].[Id]
+FROM [ConcreteEntity] AS [c]
+WHERE CONVERT(varchar(11), [c].[Id]) = @__key_0

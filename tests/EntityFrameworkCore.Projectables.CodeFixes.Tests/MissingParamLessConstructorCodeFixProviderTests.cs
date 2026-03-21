@@ -10,7 +10,6 @@ namespace EntityFrameworkCore.Projectables.CodeFixes.Tests;
 /// Tests for <see cref="MissingParameterlessConstructorCodeFixProvider"/> (EFP0008).
 /// The fix inserts a <c>public ClassName() { }</c> constructor at the top of the class body.
 /// </summary>
-[UsesVerify]
 public class MissingParamLessConstructorCodeFixProviderTests : CodeFixTestBase
 {
     private readonly static MissingParameterlessConstructorCodeFixProvider _provider = new();

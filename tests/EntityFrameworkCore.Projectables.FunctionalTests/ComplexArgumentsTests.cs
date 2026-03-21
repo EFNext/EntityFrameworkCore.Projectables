@@ -10,7 +10,6 @@ using Xunit;
 
 namespace EntityFrameworkCore.Projectables.FunctionalTests
 {
-    [UsesVerify]
     public class ComplexArgumentsTests
     {
         public class TestEntity

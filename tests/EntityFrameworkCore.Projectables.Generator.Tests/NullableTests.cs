@@ -2,11 +2,9 @@
 using Microsoft.CodeAnalysis;
 using VerifyXunit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace EntityFrameworkCore.Projectables.Generator.Tests;
 
-[UsesVerify]
 public class NullableTests : ProjectionExpressionGeneratorTestsBase
 {
     public NullableTests(ITestOutputHelper testOutputHelper) : base(testOutputHelper) { }

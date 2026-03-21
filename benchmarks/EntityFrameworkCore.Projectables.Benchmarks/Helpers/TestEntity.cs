@@ -8,6 +8,10 @@ namespace EntityFrameworkCore.Projectables.Benchmarks.Helpers
 {
     public class TestEntity
     {
+        public TestEntity()
+        {
+        }
+
         public int Id { get; set; }
 
         [Projectable]
@@ -18,5 +22,11 @@ namespace EntityFrameworkCore.Projectables.Benchmarks.Helpers
 
         [Projectable]
         public int IdPlusDelta(int delta) => Id + delta;
+
+        [Projectable]
+        public TestEntity(TestEntity other)
+        {
+            Id = other.Id;
+        }
     }
 }

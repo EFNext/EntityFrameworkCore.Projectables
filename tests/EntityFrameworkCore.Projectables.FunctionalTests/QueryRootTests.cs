@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EntityFrameworkCore.Projectables.FunctionalTests
 {
-    [UsesVerify]
     public class QueryRootTests
     {
         public record Entity

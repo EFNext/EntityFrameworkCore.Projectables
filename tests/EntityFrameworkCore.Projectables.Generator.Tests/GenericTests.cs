@@ -1,11 +1,9 @@
 ﻿using System.Threading.Tasks;
 using VerifyXunit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace EntityFrameworkCore.Projectables.Generator.Tests;
 
-[UsesVerify]
 public class GenericTests : ProjectionExpressionGeneratorTestsBase
 {
     public GenericTests(ITestOutputHelper testOutputHelper) : base(testOutputHelper) { }

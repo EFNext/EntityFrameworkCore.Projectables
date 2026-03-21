@@ -1,2 +1,0 @@
-SELECT [e].[Id] + 1
-FROM [Entity] AS [e]

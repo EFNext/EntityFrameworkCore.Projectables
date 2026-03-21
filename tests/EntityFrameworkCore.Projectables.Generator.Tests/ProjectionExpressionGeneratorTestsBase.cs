@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace EntityFrameworkCore.Projectables.Generator.Tests;
 
@@ -218,7 +217,7 @@ public abstract class ProjectionExpressionGeneratorTestsBase
         foreach (var newSyntaxTree in result.AllGeneratedTrees)
         {
             _testOutputHelper.WriteLine($"Produced syntax tree with path produced: {newSyntaxTree.FilePath}");
-            _testOutputHelper.WriteLine(newSyntaxTree.GetText().ToString());
+            _testOutputHelper.WriteLine(newSyntaxTree.GetText(TestContext.Current.CancellationToken).ToString());
         }
 
         // Verify that the generated code compiles without errors

@@ -1,2 +1,0 @@
-SELECT [p].[FirstName], N'' AS [LastName]
-FROM [PersonEntity] AS [p]

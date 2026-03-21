@@ -1,2 +1,2 @@
-SELECT UPPER([p].[LastName]) AS [Code], [p].[FirstName] AS [Name]
+﻿SELECT UPPER([p].[LastName]) AS [Code], [p].[FirstName] AS [Name]
 FROM [PersonEntity] AS [p]

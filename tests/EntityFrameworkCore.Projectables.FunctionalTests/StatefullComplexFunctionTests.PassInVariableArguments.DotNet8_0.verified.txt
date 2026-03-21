@@ -1,0 +1,4 @@
+﻿DECLARE @__argument_0 int = 1;
+
+SELECT [e].[Id] + @__argument_0
+FROM [Entity] AS [e]

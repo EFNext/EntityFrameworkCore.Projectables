@@ -12,7 +12,6 @@ using Xunit;
 namespace EntityFrameworkCore.Projectables.FunctionalTests.ExtensionMethods
 {
 
-    [UsesVerify]
     public class ExtensionMethodTests
     {
         [Fact]

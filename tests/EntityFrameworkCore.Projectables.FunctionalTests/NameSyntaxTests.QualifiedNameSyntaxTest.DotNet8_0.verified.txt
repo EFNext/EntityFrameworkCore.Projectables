@@ -1,0 +1,2 @@
+﻿SELECT 7
+FROM [Entity] AS [e]
