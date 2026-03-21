@@ -99,4 +99,12 @@ static internal class Diagnostics
         category: "Design",
         DiagnosticSeverity.Info,
         isEnabledByDefault: true);
+
+    public readonly static DiagnosticDescriptor ContainingClassShouldBePartial = new DiagnosticDescriptor(
+        id: "EFP0013",
+        title: "Containing class should be partial",
+        messageFormat: "Class '{0}' should be declared as 'partial' to allow [Projectable] to generate the expression accessor inside the class, enabling access to private and protected members",
+        category: "Design",
+        DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
 }

@@ -1,0 +1,3 @@
+﻿SELECT [p].[Id]
+FROM [PrivatePropEntity] AS [p]
+WHERE [p].[Id] * 2 + 1 > 5

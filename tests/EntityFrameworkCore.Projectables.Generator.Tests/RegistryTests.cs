@@ -140,4 +140,109 @@ namespace Foo {
 
         return Verifier.Verify(result.RegistryTree!.GetText(TestContext.Current.CancellationToken).ToString());
     }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Inline (partial class) registry entries — all three member kinds
+    // ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public Task PartialClass_Property_RegistryUsesRegisterInline()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+namespace Foo {
+    public partial class C {
+        public int Id { get; set; }
+        [Projectable]
+        public int IdPlus1 => Id + 1;
+    }
+}");
+        var result = RunGenerator(compilation);
+
+        Assert.NotNull(result.RegistryTree);
+        var registryText = result.RegistryTree!.GetText().ToString();
+        Assert.Contains("RegisterInline", registryText);
+        Assert.DoesNotContain("Register(map,", registryText); // only RegisterInline, no external Register
+
+        return Verifier.Verify(registryText);
+    }
+
+    [Fact]
+    public Task PartialClass_Method_RegistryUsesRegisterInline()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+namespace Foo {
+    public partial class C {
+        public int Id { get; set; }
+        [Projectable]
+        public int AddDelta(int delta) => Id + delta;
+    }
+}");
+        var result = RunGenerator(compilation);
+
+        Assert.NotNull(result.RegistryTree);
+        var registryText = result.RegistryTree!.GetText().ToString();
+        Assert.Contains("RegisterInline", registryText);
+        Assert.Contains("GetMethod", registryText);
+        Assert.Contains("__Projectable__AddDelta", registryText);
+
+        return Verifier.Verify(registryText);
+    }
+
+    [Fact]
+    public Task PartialClass_Constructor_RegistryUsesRegisterInline()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+namespace Foo {
+    public partial class PointDto {
+        public int X { get; set; }
+        public int Y { get; set; }
+        public PointDto() { }
+        [Projectable]
+        public PointDto(int x, int y) {
+            X = x;
+            Y = y;
+        }
+    }
+}");
+        var result = RunGenerator(compilation);
+
+        Assert.NotNull(result.RegistryTree);
+        var registryText = result.RegistryTree!.GetText().ToString();
+        Assert.Contains("RegisterInline", registryText);
+        Assert.Contains("GetConstructor", registryText);
+        Assert.Contains("__Projectable___ctor", registryText);
+
+        return Verifier.Verify(registryText);
+    }
+
+    [Fact]
+    public Task MixedPartialAndNonPartial_BothInRegistryWithCorrectHelpers()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+namespace Foo {
+    public partial class PartialEntity {
+        public int Id { get; set; }
+        [Projectable]
+        public int InlineScore => Id + 1;
+    }
+    public class NonPartialEntity {
+        public int Id { get; set; }
+        [Projectable]
+        public int ExternalScore => Id + 2;
+    }
+}");
+        var result = RunGenerator(compilation);
+
+        Assert.NotNull(result.RegistryTree);
+        var registryText = result.RegistryTree!.GetText().ToString();
+        // Partial class uses RegisterInline; non-partial uses Register
+        Assert.Contains("RegisterInline", registryText);
+        Assert.Contains("Register(map,", registryText);
+
+        return Verifier.Verify(registryText);
+    }
 }

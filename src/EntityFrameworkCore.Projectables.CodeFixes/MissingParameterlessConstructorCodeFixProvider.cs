@@ -14,6 +14,9 @@ namespace EntityFrameworkCore.Projectables.CodeFixes;
 /// Inserts a <c>public ClassName() { }</c> constructor into the class that carries the
 /// <c>[Projectable]</c> constructor, satisfying the object-initializer requirement of the
 /// generated expression tree.
+/// When all containing type declarations are <c>partial</c> (inline generation mode) a second
+/// action offering a <c>private ClassName() { }</c> constructor is also registered, since
+/// the inline accessor is generated inside the class and can access private constructors.
 /// </summary>
 [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(MissingParameterlessConstructorCodeFixProvider))]
 [Shared]
@@ -44,17 +47,56 @@ public sealed class MissingParameterlessConstructorCodeFixProvider : CodeFixProv
 
         var typeName = typeDecl.Identifier.Text;
 
+        // Always offer the public constructor fix.
         context.RegisterCodeFix(
             CodeAction.Create(
                 title: $"Add parameterless constructor to '{typeName}'",
-                createChangedDocument: ct => AddParameterlessConstructorAsync(context.Document, typeDecl, ct),
+                createChangedDocument: ct => AddParameterlessConstructorAsync(
+                    context.Document, typeDecl, SyntaxKind.PublicKeyword, ct),
                 equivalenceKey: "EFP0008_AddParameterlessConstructor"),
             diagnostic);
+
+        // When the full containing-type hierarchy is partial the accessor is generated inline
+        // inside the class; private constructors are then accessible from the accessor.
+        // Offer an additional private constructor fix in that case.
+        var isFullHierarchyPartial = IsFullHierarchyPartial(typeDecl);
+        if (isFullHierarchyPartial)
+        {
+            context.RegisterCodeFix(
+                CodeAction.Create(
+                    title: $"Add private parameterless constructor to '{typeName}'",
+                    createChangedDocument: ct => AddParameterlessConstructorAsync(
+                        context.Document, typeDecl, SyntaxKind.PrivateKeyword, ct),
+                    equivalenceKey: "EFP0008_AddPrivateParameterlessConstructor"),
+                diagnostic);
+        }
+    }
+
+    /// <summary>
+    /// Returns <c>true</c> when <paramref name="typeDecl"/> and every ancestor
+    /// <see cref="TypeDeclarationSyntax"/> all carry the <c>partial</c> modifier,
+    /// meaning the Roslyn generator will use inline generation for this type.
+    /// </summary>
+    private static bool IsFullHierarchyPartial(TypeDeclarationSyntax typeDecl)
+    {
+        SyntaxNode? current = typeDecl;
+        while (current is TypeDeclarationSyntax tds)
+        {
+            if (!tds.Modifiers.Any(SyntaxKind.PartialKeyword))
+            {
+                return false;
+            }
+
+            current = tds.Parent;
+        }
+
+        return true;
     }
 
     private async static Task<Document> AddParameterlessConstructorAsync(
         Document document,
         TypeDeclarationSyntax typeDecl,
+        SyntaxKind accessibilityKeyword,
         CancellationToken cancellationToken)
     {
         var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
@@ -66,7 +108,7 @@ public sealed class MissingParameterlessConstructorCodeFixProvider : CodeFixProv
         var parameterlessCtor = SyntaxFactory
             .ConstructorDeclaration(typeDecl.Identifier.WithoutTrivia())
             .WithModifiers(SyntaxFactory.TokenList(
-                SyntaxFactory.Token(SyntaxKind.PublicKeyword)
+                SyntaxFactory.Token(accessibilityKeyword)
                     .WithTrailingTrivia(SyntaxFactory.Space)))
             .WithParameterList(SyntaxFactory.ParameterList())
             .WithBody(SyntaxFactory.Block())
@@ -81,4 +123,3 @@ public sealed class MissingParameterlessConstructorCodeFixProvider : CodeFixProv
         return document.WithSyntaxRoot(newRoot);
     }
 }
-

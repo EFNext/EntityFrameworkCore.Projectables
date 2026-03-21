@@ -1,0 +1,2 @@
+﻿SELECT [p].[Id], [p].[FirstName] + N' ' + [p].[LastName] AS [FullName]
+FROM [PartialClassPersonSource] AS [p]

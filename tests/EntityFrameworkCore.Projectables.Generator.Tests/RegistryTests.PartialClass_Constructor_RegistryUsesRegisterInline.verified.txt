@@ -16,8 +16,7 @@ namespace EntityFrameworkCore.Projectables.Generated
             const BindingFlags allFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
             var map = new Dictionary<nint, LambdaExpression>();
             
-            Register(map, typeof(global::Foo.C).GetProperty("IdPlus1", allFlags)?.GetMethod, "EntityFrameworkCore.Projectables.Generated.Foo_C_IdPlus1");
-            Register(map, typeof(global::Foo.C).GetMethod("AddDelta", allFlags, null, new global::System.Type[] { typeof(int) }, null), "EntityFrameworkCore.Projectables.Generated.Foo_C_AddDelta_P0_int");
+            RegisterInline(map, typeof(global::Foo.PointDto).GetConstructor(allFlags, null, new global::System.Type[] { typeof(int), typeof(int) }, null), "__Projectable___ctor_P0_int_P1_int");
             
             return map;
         }

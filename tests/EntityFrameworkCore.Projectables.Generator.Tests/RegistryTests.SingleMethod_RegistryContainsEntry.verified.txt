@@ -44,5 +44,13 @@ namespace EntityFrameworkCore.Projectables.Generated
             if (exprMethod is not null)
                 map[m.MethodHandle.Value] = (LambdaExpression)exprMethod.Invoke(null, null)!;
         }
+        
+        private static void RegisterInline(Dictionary<nint, LambdaExpression> map, MethodBase m, string inlineMethodName)
+        {
+            if (m is null) return;
+            var exprMethod = m.DeclaringType?.GetMethod(inlineMethodName, BindingFlags.Static | BindingFlags.NonPublic);
+            if (exprMethod is not null)
+                map[m.MethodHandle.Value] = (LambdaExpression)exprMethod.Invoke(null, null)!;
+        }
     }
 }

@@ -64,6 +64,8 @@ static internal class ProjectionRegistryEmitter
         EmitTryGetMethod(writer);
         writer.WriteLine();
         EmitRegisterHelper(writer);
+        writer.WriteLine();
+        EmitRegisterInlineHelper(writer);
 
         writer.Indent--;
         writer.WriteLine("}");
@@ -103,6 +105,8 @@ static internal class ProjectionRegistryEmitter
     /// <summary>
     /// Emits a single <c>Register(map, typeof(T).GetXxx(...), "ClassName")</c> call
     /// for one projectable entry inside <c>Build()</c>.
+    /// When <see cref="ProjectionRegistryEntry.InlineMethodName"/> is set the accessor lives
+    /// directly on the declaring type and is looked up via <c>RegisterInline</c> instead.
     /// </summary>
     private static void WriteRegistryEntryStatement(IndentedTextWriter writer, ProjectionRegistryEntry entry)
     {
@@ -124,7 +128,17 @@ static internal class ProjectionRegistryEmitter
             _ => null
         };
 
-        if (memberCallExpr is not null)
+        if (memberCallExpr is null)
+        {
+            return;
+        }
+
+        if (entry.InlineMethodName is not null)
+        {
+            // Inline accessor: the Expression method lives on the declaring type itself.
+            writer.WriteLine($"RegisterInline(map, {memberCallExpr}, \"{entry.InlineMethodName}\");");
+        }
+        else
         {
             writer.WriteLine($"Register(map, {memberCallExpr}, \"{entry.GeneratedClassFullName}\");");
         }
@@ -180,6 +194,26 @@ static internal class ProjectionRegistryEmitter
         writer.WriteLine("if (m is null) return;");
         writer.WriteLine("var exprType = m.DeclaringType?.Assembly.GetType(exprClass);");
         writer.WriteLine(@"var exprMethod = exprType?.GetMethod(""Expression"", BindingFlags.Static | BindingFlags.NonPublic);");
+        writer.WriteLine("if (exprMethod is not null)");
+        writer.Indent++;
+        writer.WriteLine("map[m.MethodHandle.Value] = (LambdaExpression)exprMethod.Invoke(null, null)!;");
+        writer.Indent--;
+        writer.Indent--;
+        writer.WriteLine("}");
+    }
+
+    /// <summary>
+    /// Emits the private <c>RegisterInline</c> static helper used when the expression accessor
+    /// is generated inside the declaring partial class (inline mode). Instead of looking up a
+    /// separate generated type, it resolves the private method directly on the declaring type.
+    /// </summary>
+    private static void EmitRegisterInlineHelper(IndentedTextWriter writer)
+    {
+        writer.WriteLine("private static void RegisterInline(Dictionary<nint, LambdaExpression> map, MethodBase m, string inlineMethodName)");
+        writer.WriteLine("{");
+        writer.Indent++;
+        writer.WriteLine("if (m is null) return;");
+        writer.WriteLine("var exprMethod = m.DeclaringType?.GetMethod(inlineMethodName, BindingFlags.Static | BindingFlags.NonPublic);");
         writer.WriteLine("if (exprMethod is not null)");
         writer.Indent++;
         writer.WriteLine("map[m.MethodHandle.Value] = (LambdaExpression)exprMethod.Invoke(null, null)!;");

@@ -3,14 +3,14 @@
 using System;
 using System.Linq.Expressions;
 using EntityFrameworkCore.Projectables;
-using Foo;
 
-namespace EntityFrameworkCore.Projectables.Generated
+namespace Foo
 {
-    [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    static class Foo_C_Computed
+    partial class C
     {
-        static global::System.Linq.Expressions.Expression<global::System.Func<global::Foo.C, int>> Expression()
+        [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
+        [global::System.Obsolete("Generated member. Do not use.")]
+        private static global::System.Linq.Expressions.Expression<global::System.Func<global::Foo.C, int>> __Projectable__Computed()
         {
             return (global::Foo.C @this) => @this.Id * 2;
         }

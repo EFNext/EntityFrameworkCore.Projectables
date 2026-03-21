@@ -36,8 +36,7 @@ namespace Foo {
 }");
         var result = RunGenerator(compilation);
 
-        var diag = Assert.Single(result.Diagnostics);
-        Assert.Equal("EFP0012", diag.Id);
+        var diag = Assert.Single(result.AllDiagnostics.Where(d => d.Id == "EFP0012"));
         Assert.Equal(DiagnosticSeverity.Info, diag.Severity);
         Assert.Equal("Create", diag.Location.SourceTree!
             .GetRoot(TestContext.Current.CancellationToken).FindToken(diag.Location.SourceSpan.Start).ValueText);
@@ -59,7 +58,7 @@ namespace Foo {
 }");
         var result = RunGenerator(compilation);
 
-        var diag = Assert.Single(result.Diagnostics);
+        var diag = Assert.Single(result.AllDiagnostics.Where(d => d.Id == "EFP0012"));
         Assert.Equal("EFP0012", diag.Id);
     }
 
@@ -79,7 +78,7 @@ namespace Foo {
 }");
         var result = RunGenerator(compilation);
 
-        Assert.Single(result.Diagnostics.Where(d => d.Id == "EFP0012"));
+        Assert.Single(result.AllDiagnostics.Where(d => d.Id == "EFP0012"));
         Assert.Single(result.GeneratedTrees); // expression tree is still generated
     }
 
@@ -97,7 +96,7 @@ namespace Foo {
 }");
         var result = RunGenerator(compilation);
 
-        var diag = Assert.Single(result.Diagnostics);
+        var diag = Assert.Single(result.AllDiagnostics.Where(d => d.Id == "EFP0012"));
         Assert.Equal("EFP0012", diag.Id);
     }
 
@@ -121,7 +120,7 @@ namespace Foo {
 }");
         var result = RunGenerator(compilation);
 
-        Assert.DoesNotContain(result.Diagnostics, d => d.Id == "EFP0012");
+        Assert.DoesNotContain(result.AllDiagnostics, d => d.Id == "EFP0012");
     }
 
     [Fact]
@@ -138,7 +137,7 @@ namespace Foo {
 }");
         var result = RunGenerator(compilation);
 
-        Assert.DoesNotContain(result.Diagnostics, d => d.Id == "EFP0012");
+        Assert.DoesNotContain(result.AllDiagnostics, d => d.Id == "EFP0012");
     }
 
     [Fact]
@@ -155,7 +154,7 @@ namespace Foo {
 }");
         var result = RunGenerator(compilation);
 
-        Assert.DoesNotContain(result.Diagnostics, d => d.Id == "EFP0012");
+        Assert.DoesNotContain(result.AllDiagnostics, d => d.Id == "EFP0012");
     }
 
     [Fact]
@@ -194,8 +193,7 @@ namespace Foo {
         var result = RunGenerator(compilation);
 
         // A [Projectable] constructor is not a factory method — EFP0012 must not be reported.
-        Assert.DoesNotContain(result.Diagnostics, d => d.Id == "EFP0012");
+        Assert.DoesNotContain(result.AllDiagnostics, d => d.Id == "EFP0012");
     }
 }
-
 

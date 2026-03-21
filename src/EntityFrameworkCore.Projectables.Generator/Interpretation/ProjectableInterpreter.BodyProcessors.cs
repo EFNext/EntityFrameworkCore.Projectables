@@ -388,12 +388,24 @@ static internal partial class ProjectableInterpreter
 
         // Verify the containing type has an accessible parameterless (instance) constructor.
         // The generated projection is: new T() { Prop = ... }, which requires one.
+        //
+        // When every containing type declaration is partial the accessor is generated inline
+        // inside the class itself, where private and protected constructors are accessible.
+        var containingTypeDecls = constructorDeclarationSyntax.Ancestors()
+            .OfType<TypeDeclarationSyntax>()
+            .ToList();
+        var isInlineContext = containingTypeDecls.Count > 0
+            && containingTypeDecls.All(t => t.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)));
+
         var hasAccessibleParameterlessConstructor = containingType.Constructors
             .Any(c => !c.IsStatic
                       && c.Parameters.IsEmpty
-                      && c.DeclaredAccessibility is Accessibility.Public
-                          or Accessibility.Internal
-                          or Accessibility.ProtectedOrInternal);
+                      && (c.DeclaredAccessibility is Accessibility.Public
+                              or Accessibility.Internal
+                              or Accessibility.ProtectedOrInternal
+                          || (isInlineContext
+                              && c.DeclaredAccessibility is Accessibility.Private
+                                  or Accessibility.Protected)));
 
         if (!hasAccessibleParameterlessConstructor)
         {

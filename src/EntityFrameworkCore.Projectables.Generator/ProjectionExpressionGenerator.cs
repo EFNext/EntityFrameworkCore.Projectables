@@ -36,6 +36,16 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
             )
         );
 
+    private readonly static AttributeSyntax _obsoleteAttribute =
+        Attribute(
+            ParseName("global::System.Obsolete"),
+            AttributeArgumentList(
+                SingletonSeparatedList(
+                    AttributeArgument(
+                        LiteralExpression(
+                            SyntaxKind.StringLiteralExpression,
+                            Literal("Generated member. Do not use."))))));
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // Extract only pure stable data from the attribute in the transform.
@@ -185,7 +195,7 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
         {
             throw new InvalidOperationException("Expected a memberName here");
         }
-        
+
         // Report EFP0012 when a [Projectable] method is a factory that could be a constructor.
         if (member is MethodDeclarationSyntax factoryCandidate && SyntaxHelpers.TryGetFactoryMethodPattern(factoryCandidate, out _))
         {
@@ -198,6 +208,135 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
         var generatedClassName = ProjectionExpressionClassNameGenerator.GenerateName(projectable.ClassNamespace, projectable.NestedInClassNames, projectable.MemberName, projectable.ParameterTypeNames);
         var generatedFileName = projectable.ClassTypeParameterList is not null ? $"{generatedClassName}-{projectable.ClassTypeParameterList.ChildNodes().Count()}.g.cs" : $"{generatedClassName}.g.cs";
 
+        // Determine whether inline generation is possible:
+        // all containing type declarations in the syntax hierarchy must carry the `partial` modifier,
+        // and the member must not be a C# 14 extension member (those live in a synthetic type).
+        var isExtensionMember = memberSymbol.ContainingType is { IsExtension: true };
+        var containingTypeDecls = member.Ancestors().OfType<TypeDeclarationSyntax>().ToList();
+        var generateInline = !isExtensionMember
+            && containingTypeDecls.Count > 0
+            && containingTypeDecls.All(t => t.Modifiers.Any(SyntaxKind.PartialKeyword));
+
+        // EFP0013: suggest making the class partial to enable inline generation.
+        if (!isExtensionMember && containingTypeDecls.Count > 0 && !generateInline)
+        {
+            var firstNonPartial = containingTypeDecls.First(t => !t.Modifiers.Any(SyntaxKind.PartialKeyword));
+            context.ReportDiagnostic(Diagnostic.Create(
+                Infrastructure.Diagnostics.ContainingClassShouldBePartial,
+                firstNonPartial.Identifier.GetLocation(),
+                firstNonPartial.Identifier.Text));
+        }
+
+        if (generateInline)
+        {
+            EmitInlinePartialClass(member, projectable, generatedFileName, containingTypeDecls, compilation, context);
+        }
+        else
+        {
+            EmitExternalClass(member, projectable, generatedClassName, generatedFileName, compilation, context);
+        }
+    }
+
+    /// <summary>
+    /// Generates the expression accessor as a <c>private static</c> method inside the declaring
+    /// partial class. The method is hidden from the IDE via <c>[EditorBrowsable(Never)]</c> and
+    /// <c>[Obsolete]</c>, and its name starts with <c>__Projectable__</c> to signal it is generated.
+    /// Generating inside the class allows the lambda to capture <c>private</c> / <c>protected</c>
+    /// members that would be inaccessible from an external generated class.
+    /// </summary>
+    private static void EmitInlinePartialClass(
+        MemberDeclarationSyntax member,
+        ProjectableDescriptor projectable,
+        string generatedFileName,
+        List<TypeDeclarationSyntax> containingTypeDecls,
+        Compilation? compilation,
+        SourceProductionContext context)
+    {
+        var inlineMethodName = ProjectionExpressionClassNameGenerator.GenerateInlineMethodName(
+            projectable.MemberName!, projectable.ParameterTypeNames);
+
+        var methodDecl = MethodDeclaration(
+                GenericName(
+                    Identifier("global::System.Linq.Expressions.Expression"),
+                    TypeArgumentList(
+                        SingletonSeparatedList(
+                            (TypeSyntax)GenericName(
+                                Identifier("global::System.Func"),
+                                GetLambdaTypeArgumentListSyntax(projectable)
+                            )
+                        )
+                    )
+                ),
+                inlineMethodName
+            )
+            .WithModifiers(TokenList(Token(SyntaxKind.PrivateKeyword), Token(SyntaxKind.StaticKeyword)))
+            .WithTypeParameterList(projectable.TypeParameterList)
+            .WithConstraintClauses(projectable.ConstraintClauses ?? List<TypeParameterConstraintClauseSyntax>())
+            .AddAttributeLists(
+                AttributeList().AddAttributes(_editorBrowsableAttribute),
+                AttributeList().AddAttributes(_obsoleteAttribute)
+            )
+            .WithBody(
+                Block(
+                    ReturnStatement(
+                        ParenthesizedLambdaExpression(
+                            projectable.ParametersList ?? ParameterList(),
+                            null,
+                            projectable.ExpressionBody
+                        )
+                    )
+                )
+            );
+
+        // Wrap the method in the partial class hierarchy (innermost containing type first).
+        MemberDeclarationSyntax current = methodDecl;
+        foreach (var typeDecl in containingTypeDecls)
+        {
+            current = CreatePartialTypeStub(typeDecl).AddMembers(current);
+        }
+
+        var compilationUnit = CompilationUnit();
+
+        foreach (var usingDirective in projectable.UsingDirectives!)
+        {
+            compilationUnit = compilationUnit.AddUsings(usingDirective);
+        }
+
+        if (projectable.ClassNamespace is not null)
+        {
+            compilationUnit = compilationUnit.AddMembers(
+                NamespaceDeclaration(ParseName(projectable.ClassNamespace))
+                    .AddMembers((TypeDeclarationSyntax)current));
+        }
+        else
+        {
+            compilationUnit = compilationUnit.AddMembers((TypeDeclarationSyntax)current);
+        }
+
+        compilationUnit = compilationUnit
+            .WithLeadingTrivia(
+                TriviaList(
+                    Comment("// <auto-generated/>"),
+                    Trivia(NullableDirectiveTrivia(Token(SyntaxKind.DisableKeyword), true))
+                )
+            );
+
+        context.AddSource(generatedFileName, SourceText.From(compilationUnit.NormalizeWhitespace().ToFullString(), Encoding.UTF8));
+    }
+
+    /// <summary>
+    /// Generates the expression accessor as an external <c>static</c> class in the
+    /// <c>EntityFrameworkCore.Projectables.Generated</c> namespace. This is the classic
+    /// (non-inline) code path used when the containing class is not fully <c>partial</c>.
+    /// </summary>
+    private static void EmitExternalClass(
+        MemberDeclarationSyntax member,
+        ProjectableDescriptor projectable,
+        string generatedClassName,
+        string generatedFileName,
+        Compilation? compilation,
+        SourceProductionContext context)
+    {
         var classSyntax = ClassDeclaration(generatedClassName)
             .WithModifiers(TokenList(Token(SyntaxKind.StaticKeyword)))
             .WithTypeParameterList(projectable.ClassTypeParameterList)
@@ -263,35 +402,35 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
             .WithLeadingTrivia(
                 TriviaList(
                     Comment("// <auto-generated/>"),
-                    // Uncomment line below, for debugging purposes, to see when the generator is run on source generated files
-                    // CarriageReturnLineFeed, Comment($"// Generated at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff} UTC for '{memberSymbol.Name}' in '{memberSymbol.ContainingType?.Name}'"),
                     Trivia(NullableDirectiveTrivia(Token(SyntaxKind.DisableKeyword), true))
                 )
             );
 
         context.AddSource(generatedFileName, SourceText.From(compilationUnit.NormalizeWhitespace().ToFullString(), Encoding.UTF8));
+    }
 
-        static TypeArgumentListSyntax GetLambdaTypeArgumentListSyntax(ProjectableDescriptor projectable)
+    /// <summary>
+    /// Creates a minimal <c>partial</c> stub of <paramref name="originalDecl"/> containing only
+    /// the <c>partial</c> modifier, the type name, and the type-parameter list. All attribute
+    /// lists, base types, constraints, and members are stripped so the stub can be used as a
+    /// container wrapper in generated partial-class source files.
+    /// </summary>
+    private static TypeDeclarationSyntax CreatePartialTypeStub(TypeDeclarationSyntax originalDecl)
+    {
+        var stub = originalDecl
+            .WithAttributeLists(List<AttributeListSyntax>())
+            .WithModifiers(TokenList(Token(SyntaxKind.PartialKeyword)))
+            .WithBaseList(null)
+            .WithConstraintClauses(List<TypeParameterConstraintClauseSyntax>())
+            .WithMembers(List<MemberDeclarationSyntax>());
+
+        // Remove the primary constructor parameter list for record declarations.
+        if (stub is RecordDeclarationSyntax record)
         {
-            var lambdaTypeArguments = TypeArgumentList(
-                SeparatedList(
-                    // In Roslyn's syntax model, ParameterSyntax.Type is nullable: it is null for
-                    // implicitly-typed lambda parameters (e.g. `(x, y) => x + y`).
-                    // We filter those out to avoid passing null nodes into TypeArgumentList,
-                    // which would cause a NullReferenceException at generation time.
-                    // In practice all [Projectable] members have explicitly-typed parameters,
-                    // so this filter acts as a defensive guard rather than a functional branch.
-                    projectable.ParametersList?.Parameters.Where(p => p.Type is not null).Select(p => p.Type!)
-                )
-            );
-
-            if (projectable.ReturnTypeName is not null)
-            {
-                lambdaTypeArguments = lambdaTypeArguments.AddArguments(ParseTypeName(projectable.ReturnTypeName));
-            }
-
-            return lambdaTypeArguments;
+            return record.WithParameterList(null);
         }
+
+        return stub;
     }
 
     /// <summary>
@@ -349,7 +488,27 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
             memberLookupName = memberSymbol.Name;
         }
 
-        // Build the generated class name using the same logic as Execute
+        var declaringTypeFullName = containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+        // Determine whether inline generation was used (all containing types are partial).
+        var isInline = IsContainingTypeHierarchyPartial(containingType);
+
+        if (isInline)
+        {
+            var inlineMethodName = ProjectionExpressionClassNameGenerator.GenerateInlineMethodName(
+                memberLookupName,
+                parameterTypeNames.IsEmpty ? null : (IEnumerable<string>)parameterTypeNames);
+
+            return new ProjectionRegistryEntry(
+                DeclaringTypeFullName: declaringTypeFullName,
+                MemberKind: memberKind,
+                MemberLookupName: memberLookupName,
+                GeneratedClassFullName: string.Empty,
+                ParameterTypeNames: parameterTypeNames,
+                InlineMethodName: inlineMethodName);
+        }
+
+        // Build the generated class name using the same logic as EmitExternalClass.
         var classNamespace = containingType.ContainingNamespace.IsGlobalNamespace
             ? null
             : containingType.ContainingNamespace.ToDisplayString();
@@ -364,14 +523,36 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
 
         var generatedClassFullName = "EntityFrameworkCore.Projectables.Generated." + generatedClassName;
 
-        var declaringTypeFullName = containingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-
         return new ProjectionRegistryEntry(
             DeclaringTypeFullName: declaringTypeFullName,
             MemberKind: memberKind,
             MemberLookupName: memberLookupName,
             GeneratedClassFullName: generatedClassFullName,
             ParameterTypeNames: parameterTypeNames);
+    }
+
+    /// <summary>
+    /// Returns <c>true</c> when every type in the containing-type hierarchy (from
+    /// <paramref name="typeSymbol"/> up to the outermost type) has at least one partial
+    /// declaration. Used to decide whether to generate an inline accessor or an external class.
+    /// </summary>
+    private static bool IsContainingTypeHierarchyPartial(INamedTypeSymbol typeSymbol)
+    {
+        var isPartial = typeSymbol.DeclaringSyntaxReferences
+            .Any(r => r.GetSyntax() is TypeDeclarationSyntax tds
+                      && tds.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword)));
+
+        if (!isPartial)
+        {
+            return false;
+        }
+
+        if (typeSymbol.ContainingType is { } outer)
+        {
+            return IsContainingTypeHierarchyPartial(outer);
+        }
+
+        return true;
     }
 
     private static IEnumerable<string> GetRegistryNestedTypePath(INamedTypeSymbol typeSymbol)
@@ -384,5 +565,27 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
             }
         }
         yield return typeSymbol.Name;
+    }
+
+    private static TypeArgumentListSyntax GetLambdaTypeArgumentListSyntax(ProjectableDescriptor projectable)
+    {
+        var lambdaTypeArguments = TypeArgumentList(
+            SeparatedList(
+                // In Roslyn's syntax model, ParameterSyntax.Type is nullable: it is null for
+                // implicitly-typed lambda parameters (e.g. `(x, y) => x + y`).
+                // We filter those out to avoid passing null nodes into TypeArgumentList,
+                // which would cause a NullReferenceException at generation time.
+                // In practice all [Projectable] members have explicitly-typed parameters,
+                // so this filter acts as a defensive guard rather than a functional branch.
+                projectable.ParametersList?.Parameters.Where(p => p.Type is not null).Select(p => p.Type!)
+            )
+        );
+
+        if (projectable.ReturnTypeName is not null)
+        {
+            lambdaTypeArguments = lambdaTypeArguments.AddArguments(ParseTypeName(projectable.ReturnTypeName));
+        }
+
+        return lambdaTypeArguments;
     }
 }
