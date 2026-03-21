@@ -109,11 +109,11 @@ LEFT JOIN [Locations] AS [l] ON [u].[LocationId] = [l].[Id]
 
 ## Comparison Table
 
-| Option | `?.` allowed | Expression generated | SQL complexity |
-|---|---|---|---|
-| `None` | ❌ (error EFP0002) | — | — |
-| `Ignore` | ✅ | `A.B` | Simple |
-| `Rewrite` | ✅ | `A != null ? A.B : null` | Higher |
+| Option    | `?.` allowed      | Expression generated     | SQL complexity |
+|-----------|-------------------|--------------------------|----------------|
+| `None`    | ❌ (error EFP0002) | —                        | —              |
+| `Ignore`  | ✅                 | `A.B`                    | Simple         |
+| `Rewrite` | ✅                 | `A != null ? A.B : null` | Higher         |
 
 ## Practical Recommendation
 

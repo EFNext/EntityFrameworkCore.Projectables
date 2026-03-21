@@ -8,11 +8,11 @@ Navigation properties can be nullable — either because the relationship is opt
 
 ## Choosing a Strategy
 
-| Strategy | Best For |
-|---|---|
-| `Ignore` | SQL Server / databases with implicit null propagation; navigation is usually present |
-| `Rewrite` | Cosmos DB; client-side evaluation scenarios; maximum correctness |
-| Manual null check | Complex multi-level nullable chains where you want full control |
+| Strategy          | Best For                                                                             |
+|-------------------|--------------------------------------------------------------------------------------|
+| `Ignore`          | SQL Server / databases with implicit null propagation; navigation is usually present |
+| `Rewrite`         | Cosmos DB; client-side evaluation scenarios; maximum correctness                     |
+| Manual null check | Complex multi-level nullable chains where you want full control                      |
 
 ## Strategy 1: `Ignore`
 

@@ -11,7 +11,8 @@ When using EF Core, you often need to express the same business logic in two pla
 
 ```csharp
 // ❌ Without Projectables — logic duplicated
-class Order {
+class Order
+{
     // C# property (in-memory use)
     public decimal GrandTotal => Subtotal + Tax;
 
@@ -29,7 +30,8 @@ With Projectables, you write the logic once:
 
 ```csharp
 // ✅ With Projectables — write once, use everywhere
-class Order {
+class Order
+{
     [Projectable] public decimal Subtotal => Items.Sum(i => i.Price);
     [Projectable] public decimal Tax => Subtotal * TaxRate;
     [Projectable] public decimal GrandTotal => Subtotal + Tax;
@@ -68,28 +70,34 @@ LINQ query
 
 ## Comparison with Similar Libraries
 
-| Feature                      | Projectables     | Expressionify | LinqKit |
-|------------------------------|------------------|---------------|---------|
-| Source generator based       | ✅                | ✅             | ❌       |
-| Works with entity methods    | ✅                | ✅             | Partial |
-| Works with extension methods | ✅                | ✅             | ✅       |
-| Composable projectables      | ✅                | ❌             | Partial |
-| Block-bodied members         | ✅ (experimental) | ❌             | ❌       |
-| Enum method expansion        | ✅                | ❌             | ❌       |
-| Null-conditional rewriting   | ✅                | ❌             | ❌       |
-| Limited/cached mode          | ✅                | ❌             | ❌       |
+| Feature                       | Projectables     | Expressionify | LinqKit |
+|-------------------------------|------------------|---------------|---------|
+| Source generator based        | ✅                | ✅             | ❌       |
+| Works with entity methods     | ✅                | ✅             | Partial |
+| Works with extension methods  | ✅                | ✅             | ✅       |
+| Composable projectables       | ✅                | ❌             | Partial |
+| Constructor projections       | ✅                | ❌             | ❌       |
+| Pattern matching support      | ✅                | ❌             | ❌       |
+| Method overloads support      | ✅                | ❌             | ❌       |
+| Block-bodied members          | ✅ (experimental) | ❌             | ❌       |
+| Enum method expansion         | ✅                | ❌             | ❌       |
+| Null-conditional rewriting    | ✅                | ❌             | ❌       |
+| Roslyn analyzers & code fixes | ✅                | ❌             | ❌       |
+| Limited/cached mode           | ✅                | ❌             | ❌       |
 
 ## EF Core Version Compatibility
 
-| Library Version | EF Core Version                         |
-|-----------------|-----------------------------------------|
-| v1.x            | EF Core 3.1, 5                          |
-| v2.x, v3.x      | EF Core 6, 7                            |
-| v6.x+           | EF Core 6+ (block-bodied members added) |
+| Library Version | EF Core Version | Notable Additions                                                                                                |
+|-----------------|-----------------|------------------------------------------------------------------------------------------------------------------|
+| v1.x            | EF Core 3.1, 5  | Initial release                                                                                                  |
+| v2.x, v3.x      | EF Core 6, 7    | Null-conditional rewriting, enum expansion                                                                       |
+| v6.x+           | EF Core 6+      | Block-bodied members, constructor projections, pattern matching, method overloads, Roslyn analyzers & code fixes |
 
 ## Next Steps
 
 - [Install the packages →](/guide/installation)
 - [Follow the Quick Start →](/guide/quickstart)
+- [Constructor Projections →](/guide/projectable-constructors)
+- [Analyzers & Code Fixes →](/reference/diagnostics)
 - [Learn how it works internally →](/advanced/how-it-works)
 

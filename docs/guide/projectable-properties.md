@@ -19,8 +19,6 @@ public class User
 }
 ```
 
-> **Note:** The `using EntityFrameworkCore.Projectables;` namespace is required for the `[Projectable]` attribute.
-
 ## Using Projectable Properties in Queries
 
 Once defined, projectable properties can be used in **any part of a LINQ query**:

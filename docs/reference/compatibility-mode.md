@@ -79,11 +79,11 @@ Second execution with same query shape:
 
 ## Performance Comparison
 
-| Scenario | Full | Limited | Vanilla EF Core |
-|---|---|---|---|
-| First query execution | Slower (expansion overhead) | Slower (expansion + compile) | Baseline |
-| Subsequent executions | Slower (expansion overhead) | **Faster** (cache hit, no expansion) | Baseline |
-| Dynamic projectable parameters | ✅ Correct | ⚠️ May be stale | N/A |
+| Scenario                       | Full                        | Limited                              | Vanilla EF Core |
+|--------------------------------|-----------------------------|--------------------------------------|-----------------|
+| First query execution          | Slower (expansion overhead) | Slower (expansion + compile)         | Baseline        |
+| Subsequent executions          | Slower (expansion overhead) | **Faster** (cache hit, no expansion) | Baseline        |
+| Dynamic projectable parameters | ✅ Correct                   | ⚠️ May be stale                      | N/A             |
 
 ## Choosing a Mode
 

@@ -10,13 +10,13 @@ using EntityFrameworkCore.Projectables;
 
 ## Target
 
-| Target | Supported |
-|---|---|
-| Properties | ✅ |
-| Methods | ✅ |
-| Extension methods | ✅ |
-| Constructors | ❌ |
-| Indexers | ❌ |
+| Target            | Supported |
+|-------------------|-----------|
+| Properties        | ✅         |
+| Methods           | ✅         |
+| Extension methods | ✅         |
+| Constructors      | ✅ (v6.x+) |
+| Indexers          | ❌         |
 
 The attribute can be inherited by derived types (`Inherited = true`).
 
@@ -34,11 +34,11 @@ Controls how null-conditional operators (`?.`) in the member body are handled by
 public string? FullAddress => Location?.AddressLine1 + " " + Location?.City;
 ```
 
-| Value | Behavior |
-|---|---|
-| `None` (default) | Null-conditional operators are **not allowed** — the generator raises error EFP0002. |
-| `Ignore` | Null-conditional operators are **stripped** — `A?.B` becomes `A.B`. Safe for databases where null propagates implicitly (SQL Server). |
-| `Rewrite` | Null-conditional operators are **rewritten** as explicit null checks — `A?.B` becomes `A != null ? A.B : null`. Safer but may increase SQL complexity. |
+| Value            | Behavior                                                                                                                                               |
+|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `None` (default) | Null-conditional operators are **not allowed** — the generator raises error EFP0002.                                                                   |
+| `Ignore`         | Null-conditional operators are **stripped** — `A?.B` becomes `A.B`. Safe for databases where null propagates implicitly (SQL Server).                  |
+| `Rewrite`        | Null-conditional operators are **rewritten** as explicit null checks — `A?.B` becomes `A != null ? A.B : null`. Safer but may increase SQL complexity. |
 
 See [Null-Conditional Rewrite](/reference/null-conditional-rewrite) for full details.
 

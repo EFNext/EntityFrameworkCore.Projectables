@@ -275,11 +275,11 @@ FROM [Entity] AS [e]
 
 The following statement types produce **warning EFP0003** and are not supported:
 
-| Construct | Reason |
-|---|---|
-| `while` / `for` / `foreach` loops | Cannot be represented as expression trees |
-| `try` / `catch` / `finally` | Cannot be represented as expression trees |
-| `throw` statements | Cannot be represented as expression trees |
+| Construct                             | Reason                                             |
+|---------------------------------------|----------------------------------------------------|
+| `while` / `for` / `foreach` loops     | Cannot be represented as expression trees          |
+| `try` / `catch` / `finally`           | Cannot be represented as expression trees          |
+| `throw` statements                    | Cannot be represented as expression trees          |
 | `new MyClass()` in statement position | Object instantiation not supported in this context |
 
 ```csharp

@@ -14,12 +14,12 @@ hero:
       link: /guide/quickstart
     - theme: alt
       text: View on GitHub
-      link: https://github.com/koenbeuk/EntityFrameworkCore.Projectables
+      link: https://github.com/EFNext/EntityFrameworkCore.Projectables
 
 features:
   - icon: 🏷️
     title: Just Add [Projectable]
-    details: Decorate any property or method with [Projectable] and the source generator does the rest — no boilerplate, no manual expression trees.
+    details: Decorate any property, method, or constructor with [Projectable] and the source generator does the rest — no boilerplate, no manual expression trees.
 
   - icon: 🔌
     title: Works with Any EF Core Provider
@@ -33,6 +33,14 @@ features:
     title: Composable by Design
     details: Projectable members can call other projectable members. Build a library of reusable query fragments and compose them freely in any query.
 
+  - icon: 🏗️
+    title: Constructor Projections
+    details: Mark a constructor with [Projectable] to project your DTOs directly in queries — new CustomerDto(c) translates to a full SQL projection with member-init syntax.
+
+  - icon: 🔀
+    title: Pattern Matching Support
+    details: Use switch expressions, is patterns, relational patterns, and and/or combinators directly in projectable members — all rewritten into SQL CASE expressions automatically.
+
   - icon: 🛡️
     title: Null-Conditional Rewriting
     details: Working with nullable navigation properties? Configure NullConditionalRewriteSupport to automatically handle the ?. operator in generated expressions.
@@ -40,6 +48,10 @@ features:
   - icon: 🔢
     title: Enum Method Expansion
     details: Use ExpandEnumMethods to translate enum extension methods (like display names from [Display] attributes) into SQL CASE expressions automatically.
+
+  - icon: 🩺
+    title: Roslyn Analyzers & Code Fixes
+    details: Built-in Roslyn diagnostics (EFP0001–EFP0012) catch projection errors at compile time. Quick-fix actions let you resolve them with a single click in your IDE.
 ---
 
 ## At a Glance
@@ -75,4 +87,3 @@ The properties are **inlined into the SQL** — no client-side evaluation, no N+
 |----------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------|
 | [`EntityFrameworkCore.Projectables.Abstractions`](https://www.nuget.org/packages/EntityFrameworkCore.Projectables.Abstractions/) | The `[Projectable]` attribute and source generator |
 | [`EntityFrameworkCore.Projectables`](https://www.nuget.org/packages/EntityFrameworkCore.Projectables/)                           | The EF Core runtime extension                      |
-

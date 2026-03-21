@@ -2,31 +2,6 @@
 
 This page documents the current limitations of EF Core Projectables and guidance on how to work around them.
 
-## Method Overloading Is Not Supported
-
-Each projectable method name must be **unique** within its declaring type. You cannot have two projectable methods with the same name but different parameter lists.
-
-```csharp
-// ❌ Not supported — two methods named "GetTotal"
-public class Order
-{
-    [Projectable]
-    public decimal GetTotal() => Subtotal;
-
-    [Projectable]
-    public decimal GetTotal(decimal discountRate) => Subtotal * (1 - discountRate); // ❌
-}
-
-// ✅ Workaround — use distinct method names
-public class Order
-{
-    [Projectable]
-    public decimal GetTotal() => Subtotal;
-
-    [Projectable]
-    public decimal GetDiscountedTotal(decimal discountRate) => Subtotal * (1 - discountRate);
-}
-```
 
 ## Members Must Have a Body
 

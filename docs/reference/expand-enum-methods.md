@@ -60,13 +60,13 @@ FROM [Orders] AS [o]
 
 ## Supported Return Types
 
-| Return type | Default fallback value |
-|---|---|
-| `string` | `null` |
-| `bool` | `default(bool)` → `false` |
-| `int` | `default(int)` → `0` |
-| Other value types | `default(T)` |
-| Nullable types | `null` |
+| Return type       | Default fallback value    |
+|-------------------|---------------------------|
+| `string`          | `null`                    |
+| `bool`            | `default(bool)` → `false` |
+| `int`             | `default(int)` → `0`      |
+| Other value types | `default(T)`              |
+| Nullable types    | `null`                    |
 
 ## Examples
 
@@ -160,10 +160,10 @@ public class Order
 
 You might wonder: why not just put `[Projectable]` on `GetDisplayName` itself?
 
-| Approach | When to use |
-|---|---|
-| `[Projectable]` on the extension method | The method body is a simple expression EF Core can translate (e.g., `== OrderStatus.Approved`). |
-| `ExpandEnumMethods = true` | The method body is complex or references non-EF-translatable code (e.g., reads a `[Display]` attribute via reflection). |
+| Approach                                | When to use                                                                                                             |
+|-----------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| `[Projectable]` on the extension method | The method body is a simple expression EF Core can translate (e.g., `== OrderStatus.Approved`).                         |
+| `ExpandEnumMethods = true`              | The method body is complex or references non-EF-translatable code (e.g., reads a `[Display]` attribute via reflection). |
 
 `ExpandEnumMethods` evaluates the method at **compile time** for each enum value and bakes the results into the expression tree, so the method body doesn't need to be translatable at all.
 
