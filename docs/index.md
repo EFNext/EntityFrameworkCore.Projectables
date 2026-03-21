@@ -56,30 +56,53 @@ features:
 
 ## At a Glance
 
+**Without Projectables** — the same sub-expression copy-pasted into every query:
+
 ```csharp
+// ❌ Repeated 4× in a single query — change the formula and hunt down every copy
+var orders = dbContext.Orders
+    .Where(o => o.Lines.Sum(l => l.Quantity * l.UnitPrice) > 500)
+    .OrderByDescending(o => o.Lines.Sum(l => l.Quantity * l.UnitPrice) * (1 + o.TaxRate))
+    .Select(o => new
+    {
+        Total = o.Lines.Sum(l => l.Quantity * l.UnitPrice) * (1 + o.TaxRate),
+        Tier  = o.Lines.Sum(l => l.Quantity * l.UnitPrice) > 1000 ? "Premium" : "Standard"
+    })
+    .ToList();
+```
+
+**With Projectables** — define once on the entity, compose freely, use anywhere:
+
+```csharp
+// ✅ Business logic lives on the entity — queries stay clean
 class Order
 {
     public decimal TaxRate { get; set; }
-    public ICollection<OrderItem> Items { get; set; }
+    public ICollection<OrderLine> Lines { get; set; }
 
-    [Projectable] 
-    public decimal Subtotal => Items.Sum(item => item.Product.ListPrice * item.Quantity);
-    
     [Projectable]
-    public decimal Tax => Subtotal * TaxRate;
-    
+    public decimal Subtotal => Lines.Sum(l => l.Quantity * l.UnitPrice);
+
     [Projectable]
-    public decimal GrandTotal => Subtotal + Tax;
+    public decimal Total => Subtotal * (1 + TaxRate);   // composes ↑
+
+    [Projectable]
+    public string Tier => Subtotal switch               // pattern matching → SQL CASE
+    {
+        > 1000 => "Premium",
+        > 250  => "Standard",
+        _      => "Basic"
+    };
 }
 
-// Use it anywhere in your queries — translated to SQL automatically
-var result = dbContext.Users
-    .Where(u => u.UserName == "Jon")
-    .Select(u => new { u.GetMostRecentOrder().GrandTotal })
-    .FirstOrDefault();
+var orders = dbContext.Orders
+    .Where(o => o.Subtotal > 500)          // → WHERE
+    .OrderByDescending(o => o.Total)       // → ORDER BY
+    .Select(o => new { o.Total, o.Tier })  // → SELECT
+    .ToList();
 ```
 
-The properties are **inlined into the SQL** — no client-side evaluation, no N+1.
+The properties are **inlined into SQL at query time** — no client-side evaluation, no N+1, no duplicate expressions.
 
 ## NuGet Packages
 
