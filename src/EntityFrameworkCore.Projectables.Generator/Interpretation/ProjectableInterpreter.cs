@@ -200,9 +200,17 @@ static internal partial class ProjectableInterpreter
             descriptor.TargetNestedInClassNames = descriptor.NestedInClassNames;
         }
 
+        descriptor.IsDeclaringTypePartial = IsTypePartial(memberSymbol.ContainingType);
+
         return descriptor;
     }
-    
+
+    private static bool IsTypePartial(INamedTypeSymbol typeSymbol) =>
+        typeSymbol.DeclaringSyntaxReferences
+            .Select(r => r.GetSyntax())
+            .OfType<TypeDeclarationSyntax>()
+            .Any(t => t.Modifiers.Any(SyntaxKind.PartialKeyword));
+
     /// <summary>
     /// Gets the nested class path for a given type symbol, recursively including
     /// all containing types.
