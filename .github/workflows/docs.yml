@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+# TODO: Remove this when the docs website is ready to be merged into master :
+      - feature/docs-website 
     paths:
       - 'docs/**'
       - '.github/workflows/docs.yml'
@@ -11,9 +13,7 @@ on:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
@@ -22,8 +22,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build VitePress site
+  deploy:
+    name: Build and deploy VitePress site
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -38,9 +38,6 @@ jobs:
           cache: npm
           cache-dependency-path: docs/package-lock.json
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
       - name: Install dependencies
         working-directory: docs
         run: npm ci
@@ -49,20 +46,13 @@ jobs:
         working-directory: docs
         run: npm run build
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs/.vitepress/dist
-
-  deploy:
-    name: Deploy to GitHub Pages
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+          publish_dir: ./docs/.vitepress/dist
+          external_repository: EFNext/efnext.github.io
+          publish_branch: main
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
 
