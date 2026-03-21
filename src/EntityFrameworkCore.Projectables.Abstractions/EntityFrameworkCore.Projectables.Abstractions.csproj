@@ -26,6 +26,7 @@
 
   <ItemGroup>
 	<None Include="..\..\README.md" Pack="true" PackagePath="\" />
+	<None Include="build\EntityFrameworkCore.Projectables.Abstractions.props" Pack="true" PackagePath="build\" />
   </ItemGroup>
 
 </Project>

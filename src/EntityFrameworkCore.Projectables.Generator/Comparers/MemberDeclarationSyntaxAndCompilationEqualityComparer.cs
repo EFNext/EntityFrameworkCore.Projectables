@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using EntityFrameworkCore.Projectables.Generator.Models;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -6,24 +6,25 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace EntityFrameworkCore.Projectables.Generator.Comparers;
 
 /// <summary>
-/// Equality comparer for tuples of (MemberDeclarationSyntax, ProjectableAttributeData) and Compilation,
+/// Equality comparer for tuples of (MemberDeclarationSyntax, ProjectableAttributeData, ProjectableGlobalOptions) and Compilation,
 /// used as keys in the registry to determine if a member's projectable status has changed across incremental generation steps.
 /// </summary>
 internal class MemberDeclarationSyntaxAndCompilationEqualityComparer
-    : IEqualityComparer<((MemberDeclarationSyntax Member, ProjectableAttributeData Attribute), Compilation)>
+    : IEqualityComparer<((MemberDeclarationSyntax Member, ProjectableAttributeData Attribute, ProjectableGlobalOptions GlobalOptions), Compilation)>
 {
     private readonly static MemberDeclarationSyntaxEqualityComparer _memberComparer = new();
 
     public bool Equals(
-        ((MemberDeclarationSyntax Member, ProjectableAttributeData Attribute), Compilation) x,
-        ((MemberDeclarationSyntax Member, ProjectableAttributeData Attribute), Compilation) y)
+        ((MemberDeclarationSyntax Member, ProjectableAttributeData Attribute, ProjectableGlobalOptions GlobalOptions), Compilation) x,
+        ((MemberDeclarationSyntax Member, ProjectableAttributeData Attribute, ProjectableGlobalOptions GlobalOptions), Compilation) y)
     {
         var (xLeft, xCompilation) = x;
         var (yLeft, yCompilation) = y;
 
         // 1. Fast reference equality short-circuit
         if (ReferenceEquals(xLeft.Member, yLeft.Member) &&
-            ReferenceEquals(xCompilation, yCompilation))
+            ReferenceEquals(xCompilation, yCompilation) &&
+            xLeft.GlobalOptions == yLeft.GlobalOptions)
         {
             return true;
         }
@@ -43,17 +44,23 @@ internal class MemberDeclarationSyntaxAndCompilationEqualityComparer
             return false;
         }
 
-        // 4. Member text — string allocation, only reached when the SyntaxTree is shared
+        // 4. Global options (primitive record struct) — cheap value comparison
+        if (xLeft.GlobalOptions != yLeft.GlobalOptions)
+        {
+            return false;
+        }
+
+        // 5. Member text — string allocation, only reached when the SyntaxTree is shared
         if (!_memberComparer.Equals(xLeft.Member, yLeft.Member))
         {
             return false;
         }
 
-        // 5. Assembly-level references — most expensive (ImmutableArray enumeration)
+        // 6. Assembly-level references — most expensive (ImmutableArray enumeration)
         return xCompilation.ExternalReferences.SequenceEqual(yCompilation.ExternalReferences);
     }
 
-    public int GetHashCode(((MemberDeclarationSyntax Member, ProjectableAttributeData Attribute), Compilation) obj)
+    public int GetHashCode(((MemberDeclarationSyntax Member, ProjectableAttributeData Attribute, ProjectableGlobalOptions GlobalOptions), Compilation) obj)
     {
         var (left, compilation) = obj;
         unchecked
@@ -62,7 +69,8 @@ internal class MemberDeclarationSyntaxAndCompilationEqualityComparer
             hash = hash * 31 + _memberComparer.GetHashCode(left.Member);
             hash = hash * 31 + RuntimeHelpers.GetHashCode(left.Member.SyntaxTree);
             hash = hash * 31 + left.Attribute.GetHashCode();
-            
+            hash = hash * 31 + left.GlobalOptions.GetHashCode();
+
             // Incorporate compilation external references to align with Equals
             var references = compilation.ExternalReferences;
             var referencesHash = 17;
@@ -72,7 +80,7 @@ internal class MemberDeclarationSyntaxAndCompilationEqualityComparer
                 referencesHash = referencesHash * 31 + RuntimeHelpers.GetHashCode(reference);
             }
             hash = hash * 31 + referencesHash;
-            
+
             return hash;
         }
     }

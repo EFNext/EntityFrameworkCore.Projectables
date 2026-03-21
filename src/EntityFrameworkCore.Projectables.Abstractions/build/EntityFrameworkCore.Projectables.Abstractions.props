@@ -1,0 +1,17 @@
+<Project>
+  <PropertyGroup>
+    <!-- Global defaults for [Projectable] options. Override these in your project to set app-wide defaults.
+         Per-member attribute settings always take precedence over these values. -->
+    <Projectables_NullConditionalRewriteSupport
+        Condition="'$(Projectables_NullConditionalRewriteSupport)' == ''" />
+    <Projectables_ExpandEnumMethods
+        Condition="'$(Projectables_ExpandEnumMethods)' == ''" />
+    <Projectables_AllowBlockBody
+        Condition="'$(Projectables_AllowBlockBody)' == ''" />
+  </PropertyGroup>
+  <ItemGroup>
+    <CompilerVisibleProperty Include="Projectables_NullConditionalRewriteSupport" />
+    <CompilerVisibleProperty Include="Projectables_ExpandEnumMethods" />
+    <CompilerVisibleProperty Include="Projectables_AllowBlockBody" />
+  </ItemGroup>
+</Project>
