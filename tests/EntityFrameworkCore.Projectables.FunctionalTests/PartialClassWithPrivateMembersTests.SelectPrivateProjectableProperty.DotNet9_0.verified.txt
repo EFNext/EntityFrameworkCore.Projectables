@@ -1,0 +1,2 @@
+﻿SELECT [p].[Id] * 2 + 1
+FROM [PartialEntity] AS [p]

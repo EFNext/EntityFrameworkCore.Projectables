@@ -5,14 +5,17 @@ using System.Linq.Expressions;
 using EntityFrameworkCore.Projectables;
 using Foo;
 
-namespace EntityFrameworkCore.Projectables.Generated
+namespace Foo
 {
-    [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-    static class Foo_C_IsPositive
+    partial class C
     {
-        static global::System.Linq.Expressions.Expression<global::System.Func<global::Foo.C, bool>> Expression()
+        [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
+        static class Foo_C_IsPositive
         {
-            return (global::Foo.C @this) => @this.Value > 0;
+            static global::System.Linq.Expressions.Expression<global::System.Func<global::Foo.C, bool>> Expression()
+            {
+                return (global::Foo.C @this) => @this.Value > 0;
+            }
         }
     }
 }
