@@ -38,6 +38,10 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+        // Snapshot global MSBuild defaults once per generator run.
+        var globalOptions = context.AnalyzerConfigOptionsProvider
+            .Select(static (opts, _) => new ProjectableGlobalOptions(opts.GlobalOptions));
+
         // Extract only pure stable data from the attribute in the transform.
         // No live Roslyn objects (no AttributeData, SemanticModel, Compilation, ISymbol) —
         // those are always new instances and defeat incremental caching entirely.
@@ -50,14 +54,23 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
                     Attribute: new ProjectableAttributeData(c.Attributes[0])
                 ));
 
-        var compilationAndMemberPairs = memberDeclarations
+        // Flatten (Member, Attribute) + GlobalOptions into a single named tuple.
+        var memberDeclarationsWithGlobalOptions = memberDeclarations
+            .Combine(globalOptions)
+            .Select(static (pair, _) => (
+                Member: pair.Left.Member,
+                Attribute: pair.Left.Attribute,
+                GlobalOptions: pair.Right
+            ));
+
+        var compilationAndMemberPairs = memberDeclarationsWithGlobalOptions
             .Combine(context.CompilationProvider)
             .WithComparer(new MemberDeclarationSyntaxAndCompilationEqualityComparer());
 
         context.RegisterSourceOutput(compilationAndMemberPairs,
             static (spc, source) =>
             {
-                var ((member, attribute), compilation) = source;
+                var ((member, attribute, globalOptions), compilation) = source;
                 var semanticModel = compilation.GetSemanticModel(member.SyntaxTree);
                 var memberSymbol = semanticModel.GetDeclaredSymbol(member);
 
@@ -66,13 +79,13 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
                     return;
                 }
 
-                Execute(member, semanticModel, memberSymbol, attribute, compilation, spc);
+                Execute(member, semanticModel, memberSymbol, attribute, globalOptions, compilation, spc);
             });
 
         // Build the projection registry: collect all entries and emit a single registry file
         var registryEntries = compilationAndMemberPairs.Select(
             static (source, cancellationToken) => {
-                var ((member, _), compilation) = source;
+                var ((member, _, _), compilation) = source;
 
                 var semanticModel = compilation.GetSemanticModel(member.SyntaxTree);
                 var memberSymbol = semanticModel.GetDeclaredSymbol(member, cancellationToken);
@@ -170,11 +183,12 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
         SemanticModel semanticModel,
         ISymbol memberSymbol,
         ProjectableAttributeData projectableAttribute,
+        ProjectableGlobalOptions globalOptions,
         Compilation? compilation,
         SourceProductionContext context)
     {
         var projectable = ProjectableInterpreter.GetDescriptor(
-            semanticModel, member, memberSymbol, projectableAttribute, context, compilation);
+            semanticModel, member, memberSymbol, projectableAttribute, globalOptions, context, compilation);
 
         if (projectable is null)
         {

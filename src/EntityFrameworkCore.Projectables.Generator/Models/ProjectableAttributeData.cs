@@ -4,21 +4,23 @@ namespace EntityFrameworkCore.Projectables.Generator.Models;
 
 /// <summary>
 /// Plain-data snapshot of the [Projectable] attribute arguments.
+/// Nullable option fields are <c>null</c> when the named argument was absent from the attribute,
+/// meaning the global MSBuild default (or hard-coded fallback) should be used instead.
 /// </summary>
 readonly internal record struct ProjectableAttributeData
 {
-    public NullConditionalRewriteSupport NullConditionalRewriteSupport { get; }
+    public NullConditionalRewriteSupport? NullConditionalRewriteSupport { get; }
     public string? UseMemberBody { get; }
-    public bool ExpandEnumMethods { get; }
-    public bool AllowBlockBody { get; }
-    
+    public bool? ExpandEnumMethods { get; }
+    public bool? AllowBlockBody { get; }
+
     public ProjectableAttributeData(AttributeData attribute)
     {
-        var nullConditionalRewriteSupport = default(NullConditionalRewriteSupport);
+        NullConditionalRewriteSupport? nullConditionalRewriteSupport = null;
         string? useMemberBody = null;
-        var expandEnumMethods = false;
-        var allowBlockBody = false;
-        
+        bool? expandEnumMethods = null;
+        bool? allowBlockBody = null;
+
         foreach (var namedArgument in attribute.NamedArguments)
         {
             var key = namedArgument.Key;
@@ -40,20 +42,20 @@ readonly internal record struct ProjectableAttributeData
                     }
                     break;
                 case nameof(ExpandEnumMethods):
-                    if (value.Value is bool expand && expand)
+                    if (value.Value is bool expand)
                     {
-                        expandEnumMethods = true;
+                        expandEnumMethods = expand;
                     }
                     break;
                 case nameof(AllowBlockBody):
-                    if (value.Value is bool allow && allow)
+                    if (value.Value is bool allow)
                     {
-                        allowBlockBody = true;
+                        allowBlockBody = allow;
                     }
                     break;
             }
         }
-        
+
         NullConditionalRewriteSupport = nullConditionalRewriteSupport;
         UseMemberBody = useMemberBody;
         ExpandEnumMethods = expandEnumMethods;
