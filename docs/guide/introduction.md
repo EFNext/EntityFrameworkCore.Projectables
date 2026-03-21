@@ -95,8 +95,7 @@ LINQ query
 
 ## Next Steps
 
-- [Install the packages →](/guide/installation)
-- [Follow the Quick Start →](/guide/quickstart)
+- [Quick Start →](/guide/quickstart)
 - [Constructor Projections →](/guide/projectable-constructors)
 - [Analyzers & Code Fixes →](/reference/diagnostics)
 - [Learn how it works internally →](/advanced/how-it-works)

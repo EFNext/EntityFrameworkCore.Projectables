@@ -1,10 +1,55 @@
 ﻿# Quick Start
 
-This guide walks you through a complete end-to-end example — from defining entities with projectable members to seeing the generated SQL.
+This guide walks you through a complete end-to-end example — from installing the NuGet packages to seeing the generated SQL.
 
-## Step 1 — Define Your Entities
+## Prerequisites
+
+- .NET 8 to .NET 10
+- EF Core 6 or later (any provider)
+
+## Step 1 — Install the Packages
+
+Projectables is split into **two NuGet packages**:
+
+| Package                                         | Purpose                                                          |
+|-------------------------------------------------|------------------------------------------------------------------|
+| `EntityFrameworkCore.Projectables.Abstractions` | `[Projectable]` attribute + Roslyn source generator + code fixes |
+| `EntityFrameworkCore.Projectables`              | EF Core runtime interceptor (`UseProjectables()`)                |
+
+In most single-project setups both packages go in the same project.
+
+### .NET CLI
+
+```bash
+dotnet add package EntityFrameworkCore.Projectables.Abstractions
+dotnet add package EntityFrameworkCore.Projectables
+```
+
+### Package Manager Console
+
+```powershell
+Install-Package EntityFrameworkCore.Projectables.Abstractions
+Install-Package EntityFrameworkCore.Projectables
+```
+
+### PackageReference (`.csproj`)
+
+```xml
+<ItemGroup>
+  <PackageReference Include="EntityFrameworkCore.Projectables.Abstractions" Version="*" />
+  <PackageReference Include="EntityFrameworkCore.Projectables" Version="*" />
+</ItemGroup>
+```
+
+> **Tip:** Replace `*` with the [latest stable version](https://www.nuget.org/packages/EntityFrameworkCore.Projectables/).
+
+## Step 2 — Define Your Entities
+
+Add `[Projectable]` to any property or method whose body you want EF Core to translate to SQL:
 
 ```csharp
+using EntityFrameworkCore.Projectables;
+
 public class User
 {
     public int Id { get; set; }
@@ -43,7 +88,21 @@ public class Product
 }
 ```
 
-## Step 2 — Enable Projectables on Your DbContext
+The source generator runs at **compile time** and emits a companion `Expression<TDelegate>` for each `[Projectable]` member — no runtime reflection.
+
+## Step 3 — Enable Projectables on Your DbContext
+
+Call `UseProjectables()` when configuring your `DbContextOptions`. The extension method is in the `Microsoft.EntityFrameworkCore` namespace and is included in the `EntityFrameworkCore.Projectables` package.
+
+### With DI (`AddDbContext`)
+
+```csharp
+services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(connectionString)
+           .UseProjectables());
+```
+
+### With `OnConfiguring`
 
 ```csharp
 public class AppDbContext : DbContext
@@ -55,12 +114,12 @@ public class AppDbContext : DbContext
     {
         optionsBuilder
             .UseSqlServer("your-connection-string")
-            .UseProjectables();  // Enable the runtime interceptor
+            .UseProjectables();
     }
 }
 ```
 
-## Step 3 — Use Projectable Members in Queries
+## Step 4 — Use Projectable Members in Queries
 
 Now you can use `GrandTotal`, `Subtotal`, and `Tax` **directly in any LINQ query**:
 
@@ -86,7 +145,7 @@ var sortedOrders = dbContext.Orders
     .ToList();
 ```
 
-## Step 4 — Check the Generated SQL
+## Step 5 — Check the Generated SQL
 
 Use `ToQueryString()` to inspect the SQL EF Core generates:
 
@@ -98,7 +157,7 @@ var query = dbContext.Orders
 Console.WriteLine(query.ToQueryString());
 ```
 
-The `GrandTotal` property — which itself uses `Subtotal` (which is also `[Projectable]`) — is fully inlined:
+The `GrandTotal` property composes `Subtotal` (which is also `[Projectable]`) — both are fully inlined into SQL:
 
 ```sql
 SELECT [o].[Id], [o].[UserId], [o].[CreatedDate], [o].[TaxRate]

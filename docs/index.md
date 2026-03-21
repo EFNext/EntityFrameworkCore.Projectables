@@ -7,7 +7,7 @@ hero:
   tagline: Write properties and methods once — use them anywhere in your LINQ queries, translated to efficient SQL automatically.
   actions:
     - theme: brand
-      text: Get Started
+      text: Introduction
       link: /guide/introduction
     - theme: alt
       text: Quick Start
@@ -27,7 +27,7 @@ features:
 
   - icon: ⚡
     title: Performance-First Design
-    details: Limited compatibility mode expands and caches queries after their first execution. Subsequent calls skip the expansion step entirely, often outperforming native EF Core.
+    details: Limited compatibility mode expands and caches queries after their first execution. Subsequent calls skip the expansion step entirely.
 
   - icon: 🔗
     title: Composable by Design
