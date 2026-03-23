@@ -1,5 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -156,6 +157,57 @@ public abstract class ProjectionExpressionGeneratorTestsBase
         LogGeneratorResult(result, outputCompilation);
 
         return result;
+    }
+
+    /// <summary>
+    /// Runs the generator with the supplied MSBuild global properties (simulating
+    /// <c>CompilerVisibleProperty</c> values read from the project file).
+    /// </summary>
+    protected TestGeneratorRunResult RunGenerator(Compilation compilation, IReadOnlyDictionary<string, string> globalProperties)
+    {
+        _testOutputHelper.WriteLine("Running generator with global properties and updating compilation...");
+
+        var subject = new ProjectionExpressionGenerator();
+        var optionsProvider = new DictionaryAnalyzerConfigOptionsProvider(globalProperties);
+        GeneratorDriver driver = CSharpGeneratorDriver
+            .Create(subject)
+            .WithUpdatedAnalyzerConfigOptions(optionsProvider);
+        driver = driver
+            .RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out _);
+
+        var rawResult = driver.GetRunResult();
+        var result = new TestGeneratorRunResult(rawResult);
+
+        LogGeneratorResult(result, outputCompilation);
+
+        return result;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Helpers for injecting MSBuild global properties in tests
+    // ---------------------------------------------------------------------------
+
+    private sealed class DictionaryAnalyzerConfigOptions : AnalyzerConfigOptions
+    {
+        private readonly IReadOnlyDictionary<string, string> _dict;
+        public DictionaryAnalyzerConfigOptions(IReadOnlyDictionary<string, string> dict) => _dict = dict;
+        public override bool TryGetValue(string key, [NotNullWhen(true)] out string? value) =>
+            _dict.TryGetValue(key, out value);
+    }
+
+    private sealed class DictionaryAnalyzerConfigOptionsProvider : AnalyzerConfigOptionsProvider
+    {
+        private static readonly AnalyzerConfigOptions _empty =
+            new DictionaryAnalyzerConfigOptions(ImmutableDictionary<string, string>.Empty);
+
+        public DictionaryAnalyzerConfigOptionsProvider(IReadOnlyDictionary<string, string> globalOptions)
+        {
+            GlobalOptions = new DictionaryAnalyzerConfigOptions(globalOptions);
+        }
+
+        public override AnalyzerConfigOptions GlobalOptions { get; }
+        public override AnalyzerConfigOptions GetOptions(SyntaxTree tree) => _empty;
+        public override AnalyzerConfigOptions GetOptions(AdditionalText textFile) => _empty;
     }
 
     /// <summary>

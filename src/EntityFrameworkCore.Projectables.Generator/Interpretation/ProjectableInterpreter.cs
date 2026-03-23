@@ -13,14 +13,18 @@ static internal partial class ProjectableInterpreter
         MemberDeclarationSyntax member,
         ISymbol memberSymbol,
         ProjectableAttributeData projectableAttribute,
+        ProjectableGlobalOptions globalOptions,
         SourceProductionContext context,
         Compilation? compilation = null)
     {
-        // Read directly from the struct fields
-        var nullConditionalRewriteSupport = projectableAttribute.NullConditionalRewriteSupport;
+        // Resolve effective values: per-attribute wins, then global MSBuild default, then hard-coded fallback.
+        var nullConditionalRewriteSupport =
+            projectableAttribute.NullConditionalRewriteSupport ?? globalOptions.NullConditionalRewriteSupport ?? default;
         var useMemberBody = projectableAttribute.UseMemberBody;
-        var expandEnumMethods = projectableAttribute.ExpandEnumMethods;
-        var allowBlockBody = projectableAttribute.AllowBlockBody;
+        var expandEnumMethods =
+            projectableAttribute.ExpandEnumMethods ?? globalOptions.ExpandEnumMethods ?? false;
+        var allowBlockBody =
+            projectableAttribute.AllowBlockBody ?? globalOptions.AllowBlockBody ?? false;
 
         // 1. Resolve the member body (handles UseMemberBody redirection)
         var memberBody = TryResolveMemberBody(member, memberSymbol, useMemberBody, context);
