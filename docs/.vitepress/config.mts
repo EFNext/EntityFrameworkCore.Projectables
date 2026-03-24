@@ -14,7 +14,7 @@ const baseHeaders: HeadConfig[] = [
     ['meta', { name: 'twitter:image', content: 'https://projectables.github.io/social.svg' }],
 ];
 
-const headers = process.env.GITHUB_PAGES === "true" ?
+const headers = process.env.GITHUB_ACTIONS === "true" ?
     [...baseHeaders, umamiScript] :
     baseHeaders;
 
