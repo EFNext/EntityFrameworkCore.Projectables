@@ -8,10 +8,10 @@ const umamiScript: HeadConfig = ["script", {
 
 const baseHeaders: HeadConfig[] = [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
-    ['meta', { property: 'og:image', content: 'https://projectables.github.io/social.svg' }],
+    ['meta', { property: 'og:image', content: 'https://efnext.github.io/social.svg' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
-    ['meta', { name: 'twitter:image', content: 'https://projectables.github.io/social.svg' }],
+    ['meta', { name: 'twitter:image', content: 'https://efnext.github.io/social.svg' }],
 ];
 
 const headers = process.env.GITHUB_ACTIONS === "true" ?

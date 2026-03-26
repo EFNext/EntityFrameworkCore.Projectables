@@ -14,7 +14,7 @@ Flexible projection magic for EF Core
 1. Install the package from [NuGet](https://www.nuget.org/packages/EntityFrameworkCore.Projectables/)
 2. Enable Projectables in your DbContext by adding: `dbContextOptions.UseProjectables()`
 3. Mark properties, methods, or constructors with `[Projectable]`.
-4. Read the **[documentation](https://projectables.github.io)** for guides, reference, and recipes.
+4. Read the **[documentation](https://efnext.github.io)** for guides, reference, and recipes.
 
 ### Example
 
@@ -50,19 +50,19 @@ There are two components: a **Roslyn source generator** that emits companion `Ex
 
 ## Features (v6.x+)
 
-| Feature | Docs |
-|---|---|
-| Properties & methods | [Guide →](https://projectables.github.io/guide/projectable-properties) |
-| Extension methods | [Guide →](https://projectables.github.io/guide/extension-methods) |
-| Constructor projections | [Guide →](https://projectables.github.io/guide/projectable-constructors) |
-| Method overloads | Fully supported |
-| Pattern matching (`switch`, `is`) | [Reference →](https://projectables.github.io/reference/pattern-matching) |
-| Block-bodied members (experimental) | [Advanced →](https://projectables.github.io/advanced/block-bodied-members) |
-| Null-conditional rewriting | [Reference →](https://projectables.github.io/reference/null-conditional-rewrite) |
-| Enum method expansion | [Reference →](https://projectables.github.io/reference/expand-enum-methods) |
-| `UseMemberBody` | [Reference →](https://projectables.github.io/reference/use-member-body) |
-| Roslyn analyzers & code fixes (EFP0001–EFP0012) | [Reference →](https://projectables.github.io/reference/diagnostics) |
-| Limited/Full compatibility mode | [Reference →](https://projectables.github.io/reference/compatibility-mode) |
+| Feature                                         | Docs                                                                       |
+|-------------------------------------------------|----------------------------------------------------------------------------|
+| Properties & methods                            | [Guide →](https://efnext.github.io/guide/projectable-properties)           |
+| Extension methods                               | [Guide →](https://efnext.github.io/guide/extension-methods)                |
+| Constructor projections                         | [Guide →](https://efnext.github.io/guide/projectable-constructors)         |
+| Method overloads                                | Fully supported                                                            |
+| Pattern matching (`switch`, `is`)               | [Reference →](https://efnext.github.io/reference/pattern-matching)         |
+| Block-bodied members (experimental)             | [Advanced →](https://efnext.github.io/advanced/block-bodied-members)       |
+| Null-conditional rewriting                      | [Reference →](https://efnext.github.io/reference/null-conditional-rewrite) |
+| Enum method expansion                           | [Reference →](https://efnext.github.io/reference/expand-enum-methods)      |
+| `UseMemberBody`                                 | [Reference →](https://efnext.github.io/reference/use-member-body)          |
+| Roslyn analyzers & code fixes (EFP0001–EFP0012) | [Reference →](https://efnext.github.io/reference/diagnostics)              |
+| Limited/Full compatibility mode                 | [Reference →](https://efnext.github.io/reference/compatibility-mode)       |
 
 ## FAQ
 
@@ -70,7 +70,7 @@ There are two components: a **Roslyn source generator** that emits companion `Ex
 No. The interceptor hooks into EF Core's query compilation pipeline before any provider-specific translation, so it works with SQL Server, PostgreSQL, SQLite, Cosmos DB, and any other EF Core provider.
 
 #### Are there performance implications?
-Two compatibility modes are available: **Full** (default) expands every query before handing it to EF Core; **Limited** expands once and caches the result. Limited mode often outperforms plain EF Core on repeated queries. See the [Compatibility Mode docs](https://projectables.github.io/reference/compatibility-mode).
+Two compatibility modes are available: **Full** (default) expands every query before handing it to EF Core; **Limited** expands once and caches the result. Limited mode often outperforms plain EF Core on repeated queries. See the [Compatibility Mode docs](https://efnext.github.io/reference/compatibility-mode).
 
 #### Can I compose projectables?
 Yes — a `[Projectable]` member can call other `[Projectable]` members. They are recursively inlined into the final SQL.
