@@ -23,6 +23,33 @@ namespace EntityFrameworkCore.Projectables.Tests.Services
             Assert.Equal(expected, result);
         }
 
+        /// <summary>
+        /// Verifies that <c>global::</c> inside generic type argument lists is stripped, not
+        /// preserved as <c>global__</c>.  This is critical for C# 14 extension members whose
+        /// receiver type is a closed generic (e.g. <c>extension(Wrapper&lt;Entity&gt; w)</c>):
+        /// the generator uses <c>SymbolDisplayFormat.FullyQualifiedFormat</c>
+        /// which emits <c>global::</c> on every nested type, but the runtime resolver never
+        /// includes <c>global::</c> — so both sides must agree on the sanitised name.
+        /// </summary>
+        [Theory]
+        [InlineData(
+            "global::Foo.Wrapper<global::Foo.Entity>",
+            "ns_a_m_P0_Foo_Wrapper_Foo_Entity_")]
+        [InlineData(
+            "global::System.Collections.Generic.List<global::System.Int32>",
+            "ns_a_m_P0_System_Collections_Generic_List_System_Int32_")]
+        [InlineData(
+            "global::Foo.Entity",
+            "ns_a_m_P0_Foo_Entity")]
+        public void GenerateName_WithGlobalPrefixInGenericArgs_StripsAllGlobalPrefixes(
+            string paramTypeName, string expected)
+        {
+            var result = ProjectionExpressionClassNameGenerator.GenerateName(
+                "ns", new[] { "a" }, "m", new[] { paramTypeName });
+
+            Assert.Equal(expected, result);
+        }
+
         [Fact]
         public void GeneratedFullName()
         {

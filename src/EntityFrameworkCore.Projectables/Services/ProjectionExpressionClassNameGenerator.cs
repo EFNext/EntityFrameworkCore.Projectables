@@ -112,19 +112,37 @@ namespace EntityFrameworkCore.Projectables.Services
         }
 
         /// <summary>
-        /// Appends <paramref name="typeName"/> to <paramref name="sb"/>, stripping the
-        /// <c>global::</c> prefix and replacing every character that is invalid in a C# identifier
-        /// with <c>'_'</c> — all in a single pass with no intermediate string allocations.
+        /// Appends <paramref name="typeName"/> to <paramref name="sb"/>, stripping every
+        /// <c>global::</c> occurrence (leading and those inside generic type argument lists)
+        /// and replacing every character that is invalid in a C# identifier with <c>'_'</c>.
+        /// <para>
+        /// The multi-occurrence stripping is necessary so that fully-qualified generic types
+        /// such as <c>global::Foo.Wrapper&lt;global::Foo.Entity&gt;</c> — produced by Roslyn's
+        /// <c>FullyQualifiedFormat</c> — yield the same sanitised name as the runtime resolver,
+        /// which never includes <c>global::</c>.
+        /// </para>
         /// </summary>
         private static void AppendSanitizedTypeName(StringBuilder sb, string typeName)
         {
             const string GlobalPrefix = "global::";
-            var start = typeName.StartsWith(GlobalPrefix, StringComparison.Ordinal) ? GlobalPrefix.Length : 0;
+            const int PrefixLength = 8; // "global::".Length
 
-            for (var i = start; i < typeName.Length; i++)
+            var i = 0;
+            while (i < typeName.Length)
             {
+                // Skip every "global::" occurrence — both the leading prefix and any that
+                // appear inside generic type argument lists (e.g. "Wrapper<global::Inner>").
+                if (typeName[i] == 'g'
+                    && i + PrefixLength <= typeName.Length
+                    && string.CompareOrdinal(typeName, i, GlobalPrefix, 0, PrefixLength) == 0)
+                {
+                    i += PrefixLength;
+                    continue;
+                }
+
                 var c = typeName[i];
                 sb.Append(IsInvalidIdentifierChar(c) ? '_' : c);
+                i++;
             }
         }
 

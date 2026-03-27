@@ -37,6 +37,18 @@ namespace EntityFrameworkCore.Projectables.FunctionalTests.ExtensionMembers
 
             return Verifier.Verify(query.ToQueryString());
         }
+
+        [Fact]
+        public Task ExtensionMemberMethodOnGenericReceiverType()
+        {
+            using var dbContext = new SampleDbContext<Entity>();
+
+            var query = dbContext.Set<Entity>()
+                .Select(x => new GenericWrapper<Entity> { Id = x.Id })
+                .Select(x => x.DoubleId());
+
+            return Verifier.Verify(query.ToQueryString());
+        }
     }
 }
 #endif

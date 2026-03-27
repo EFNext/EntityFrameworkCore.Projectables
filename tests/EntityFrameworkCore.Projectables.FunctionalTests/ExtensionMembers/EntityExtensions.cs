@@ -25,6 +25,20 @@ namespace EntityFrameworkCore.Projectables.FunctionalTests.ExtensionMembers
         }
     }
 
+    public static class GenericWrapperExtensions
+    {
+        extension(GenericWrapper<Entity> w)
+        {
+            /// <summary>
+            /// Extension member on a closed generic receiver type — exercises the
+            /// code path where <c>global::</c> appears inside generic type arguments
+            /// in the fully-qualified receiver type name.
+            /// </summary>
+            [Projectable]
+            public int DoubleId() => w.Id * 2;
+        }
+    }
+
     public static class IntExtensions
     {
         extension(int i)

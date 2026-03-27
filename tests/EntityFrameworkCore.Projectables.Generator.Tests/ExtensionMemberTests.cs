@@ -279,5 +279,33 @@ namespace Foo {
 
         return Verifier.Verify(result.GeneratedTrees[0].ToString());
     }
+
+    [Fact]
+    public Task ExtensionMemberOnGenericReceiverType()
+    {
+        var compilation = CreateCompilation(@"
+using System;
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    class Entity { public int Id { get; set; } }
+    class Wrapper<T> { public T Value { get; set; } }
+
+    static class WrapperExtensions {
+        extension(Wrapper<Entity> w) {
+            [Projectable]
+            public int DoubleId() => w.Value.Id * 2;
+        }
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
 #endif
 }
