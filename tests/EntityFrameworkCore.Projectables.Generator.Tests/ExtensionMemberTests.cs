@@ -279,5 +279,87 @@ namespace Foo {
 
         return Verifier.Verify(result.GeneratedTrees[0].ToString());
     }
+
+    [Fact]
+    public Task ExtensionMemberOnGenericReceiverType()
+    {
+        var compilation = CreateCompilation(@"
+using System;
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    class Entity { public int Id { get; set; } }
+    class Wrapper<T> { public T Value { get; set; } }
+
+    static class WrapperExtensions {
+        extension(Wrapper<Entity> w) {
+            [Projectable]
+            public int DoubleId() => w.Value.Id * 2;
+        }
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
+
+    [Fact]
+    public Task ExtensionMemberOnOpenGenericReceiverType()
+    {
+        var compilation = CreateCompilation(@"
+using System;
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    class Wrapper<T> { public int Id { get; set; } }
+
+    static class WrapperExtensions {
+        extension<T>(Wrapper<T> w) {
+            [Projectable]
+            public int DoubleId() => w.Id * 2;
+        }
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
+
+    [Fact]
+    public Task ExtensionMemberOnOpenGenericReceiverTypeWithConstraint()
+    {
+        var compilation = CreateCompilation(@"
+using System;
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    class Wrapper<T> { public int Id { get; set; } }
+
+    static class WrapperExtensions {
+        extension<T>(Wrapper<T> w) where T : class {
+            [Projectable]
+            public int TripleId() => w.Id * 3;
+        }
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
 #endif
 }

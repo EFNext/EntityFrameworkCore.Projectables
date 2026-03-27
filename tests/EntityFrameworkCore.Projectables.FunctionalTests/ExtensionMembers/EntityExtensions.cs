@@ -25,6 +25,35 @@ namespace EntityFrameworkCore.Projectables.FunctionalTests.ExtensionMembers
         }
     }
 
+    /// <summary>
+    /// Extension on a closed generic receiver type: <c>extension(GenericWrapper&lt;Entity&gt; w)</c>.
+    /// Tests the fix for the bug where <c>global::</c> inside generic type arguments caused a
+    /// name mismatch between the generated class and the runtime resolver.
+    /// </summary>
+    public static class ClosedGenericWrapperExtensions
+    {
+        extension(GenericWrapper<Entity> w)
+        {
+            [Projectable]
+            public int DoubleId() => w.Id * 2;
+        }
+    }
+
+    /// <summary>
+    /// Extension on an open generic receiver type: <c>extension&lt;T&gt;(GenericWrapper&lt;T&gt; w)</c>.
+    /// The block-level type parameter <c>T</c> becomes a method-level type parameter on the
+    /// generated <c>Expression&lt;T&gt;()</c> factory, resolved at runtime via generic method
+    /// reflection.
+    /// </summary>
+    public static class OpenGenericWrapperExtensions
+    {
+        extension<T>(GenericWrapper<T> w) where T : class
+        {
+            [Projectable]
+            public int TripleId() => w.Id * 3;
+        }
+    }
+
     public static class IntExtensions
     {
         extension(int i)

@@ -64,6 +64,15 @@ static internal partial class ProjectableInterpreter
         ApplyParameterList(methodDeclarationSyntax.ParameterList, declarationSyntaxRewriter, descriptor);
         ApplyTypeParameters(methodDeclarationSyntax, declarationSyntaxRewriter, descriptor);
 
+        // For C# 14 generic extension blocks (e.g. extension<T>(Wrapper<T> w)), the block-level
+        // type parameter T is on the extension type, not on the method declaration syntax.
+        // ApplyTypeParameters() therefore finds nothing; promote the extension-block type
+        // parameters to method-level type parameters when no syntax-level ones were found.
+        if (descriptor.TypeParameterList is null)
+        {
+            ApplyExtensionBlockTypeParameters(memberSymbol, descriptor);
+        }
+
         return true;
     }
 
