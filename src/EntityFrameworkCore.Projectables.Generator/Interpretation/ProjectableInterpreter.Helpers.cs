@@ -51,6 +51,90 @@ static internal partial class ProjectableInterpreter
     }
 
     /// <summary>
+    /// For C# 14 generic extension blocks (e.g. <c>extension&lt;T&gt;(Wrapper&lt;T&gt; w)</c>),
+    /// the block-level type parameter <c>T</c> is owned by the extension type, not by the
+    /// method declaration syntax. <see cref="ApplyTypeParameters"/> therefore finds no
+    /// <c>TypeParameterList</c> on the method and produces nothing.
+    /// <para>
+    /// This helper promotes those extension-block type parameters to method-level type
+    /// parameters on <paramref name="descriptor"/> so the generated
+    /// <c>Expression&lt;T&gt;()</c> factory method is correctly generic.
+    /// It is a no-op when the containing type is not a generic extension block.
+    /// </para>
+    /// </summary>
+    private static void ApplyExtensionBlockTypeParameters(
+        ISymbol memberSymbol,
+        ProjectableDescriptor descriptor)
+    {
+        if (memberSymbol.ContainingType is not { IsExtension: true } extensionType
+            || extensionType.TypeParameters.IsDefaultOrEmpty)
+        {
+            return;
+        }
+
+        descriptor.TypeParameterList = SyntaxFactory.TypeParameterList();
+
+        foreach (var tp in extensionType.TypeParameters)
+        {
+            descriptor.TypeParameterList = descriptor.TypeParameterList.AddParameters(
+                SyntaxFactory.TypeParameter(tp.Name));
+
+            // Build the constraint clause when any constraint is present.
+            var hasAnyConstraint =
+                tp.HasReferenceTypeConstraint
+                || tp.HasValueTypeConstraint
+                || tp.HasNotNullConstraint
+                || !tp.ConstraintTypes.IsDefaultOrEmpty
+                || tp.HasConstructorConstraint;
+
+            if (!hasAnyConstraint)
+            {
+                continue;
+            }
+
+            descriptor.ConstraintClauses ??= SyntaxFactory.List<TypeParameterConstraintClauseSyntax>();
+            descriptor.ConstraintClauses = descriptor.ConstraintClauses.Value.Add(BuildConstraintClause(tp));
+        }
+    }
+
+    /// <summary>
+    /// Builds a <see cref="TypeParameterConstraintClauseSyntax"/> for <paramref name="tp"/>
+    /// by collecting all of its constraints in canonical order:
+    /// <c>class</c> / <c>struct</c> / <c>notnull</c>, explicit type constraints, then <c>new()</c>.
+    /// </summary>
+    private static TypeParameterConstraintClauseSyntax BuildConstraintClause(ITypeParameterSymbol tp)
+    {
+        var constraints = new List<TypeConstraintSyntax>();
+
+        if (tp.HasReferenceTypeConstraint)
+        {
+            constraints.Add(MakeTypeConstraint("class"));
+        }
+
+        if (tp.HasValueTypeConstraint)
+        {
+            constraints.Add(MakeTypeConstraint("struct"));
+        }
+
+        if (tp.HasNotNullConstraint)
+        {
+            constraints.Add(MakeTypeConstraint("notnull"));
+        }
+
+        constraints.AddRange(tp.ConstraintTypes
+            .Select(c => MakeTypeConstraint(c.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))));
+
+        if (tp.HasConstructorConstraint)
+        {
+            constraints.Add(MakeTypeConstraint("new()"));
+        }
+
+        return SyntaxFactory.TypeParameterConstraintClause(
+            SyntaxFactory.IdentifierName(tp.Name),
+            SyntaxFactory.SeparatedList<TypeParameterConstraintSyntax>(constraints));
+    }
+
+    /// <summary>
     /// Returns the readable getter expression from a property declaration, trying in order:
     /// the property-level expression-body, the getter's expression-body, then the first
     /// <see langword="return"/> expression in a block-bodied getter.

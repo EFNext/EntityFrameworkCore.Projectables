@@ -261,36 +261,7 @@ static internal partial class ProjectableInterpreter
             }
 
             descriptor.ClassConstraintClauses ??= SyntaxFactory.List<TypeParameterConstraintClauseSyntax>();
-
-            var constraints = new List<TypeConstraintSyntax>();
-
-            if (tp.HasReferenceTypeConstraint)
-            {
-                constraints.Add(MakeTypeConstraint("class"));
-            }
-
-            if (tp.HasValueTypeConstraint)
-            {
-                constraints.Add(MakeTypeConstraint("struct"));
-            }
-
-            if (tp.HasNotNullConstraint)
-            {
-                constraints.Add(MakeTypeConstraint("notnull"));
-            }
-
-            constraints.AddRange(tp.ConstraintTypes
-                .Select(c => MakeTypeConstraint(c.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))));
-
-            if (tp.HasConstructorConstraint)
-            {
-                constraints.Add(MakeTypeConstraint("new()"));
-            }
-
-            descriptor.ClassConstraintClauses = descriptor.ClassConstraintClauses.Value.Add(
-                SyntaxFactory.TypeParameterConstraintClause(
-                    SyntaxFactory.IdentifierName(tp.Name),
-                    SyntaxFactory.SeparatedList<TypeParameterConstraintSyntax>(constraints)));
+            descriptor.ClassConstraintClauses = descriptor.ClassConstraintClauses.Value.Add(BuildConstraintClause(tp));
         }
     }
 
