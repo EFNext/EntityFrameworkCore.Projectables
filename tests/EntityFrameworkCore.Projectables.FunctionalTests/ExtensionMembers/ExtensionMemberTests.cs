@@ -37,6 +37,18 @@ namespace EntityFrameworkCore.Projectables.FunctionalTests.ExtensionMembers
 
             return Verifier.Verify(query.ToQueryString());
         }
+
+        [Fact]
+        public Task ExtensionMemberMethodWithParameterOnWrappedEntity()
+        {
+            using var dbContext = new SampleDbContext<Entity>();
+
+            var query = dbContext.Set<Entity>()
+                .Select(x => new GenericWrapper<Entity> { Wrapped = x })
+                .Select(w => w.MultiplyWrapped(10));
+
+            return Verifier.Verify(query.ToQueryString());
+        }
     }
 }
 #endif

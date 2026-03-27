@@ -17,10 +17,10 @@ using System;
 using EntityFrameworkCore.Projectables;
 
 namespace Foo {
-    class Entity { 
+    class Entity {
         public int Id { get; set; }
     }
-    
+
     static class EntityExtensions {
         extension(Entity e) {
             [Projectable]
@@ -46,10 +46,10 @@ using System;
 using EntityFrameworkCore.Projectables;
 
 namespace Foo {
-    class Entity { 
+    class Entity {
         public int Id { get; set; }
     }
-    
+
     static class EntityExtensions {
         extension(Entity e) {
             [Projectable]
@@ -75,10 +75,10 @@ using System;
 using EntityFrameworkCore.Projectables;
 
 namespace Foo {
-    class Entity { 
+    class Entity {
         public int Id { get; set; }
     }
-    
+
     static class EntityExtensions {
         extension(Entity e) {
             [Projectable]
@@ -127,11 +127,11 @@ using System;
 using EntityFrameworkCore.Projectables;
 
 namespace Foo {
-    class Entity { 
+    class Entity {
         public int Id { get; set; }
         public string Name { get; set; }
     }
-    
+
     static class EntityExtensions {
         extension(Entity e) {
             [Projectable]
@@ -267,6 +267,38 @@ namespace Foo {
         extension(Entity e) {
             [Projectable]
             public bool IsHighValue => e.Value is > 100;
+        }
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
+    [Fact]
+    public Task ExtensionMemberOnGenericType()
+    {
+        var compilation = CreateCompilation(@"
+using System;
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    class Entity {
+        public int Value { get; set; }
+    }
+
+    class Wrapper<T> {
+        public T Wrapped { get; set; }
+    }
+
+    static class EntityExtensions {
+        extension(Wrapper<Entity> e) {
+            [Projectable]
+            public int TimesHundred => e.Wrapped.Value * 100;
         }
     }
 }

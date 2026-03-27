@@ -23,6 +23,15 @@ namespace EntityFrameworkCore.Projectables.FunctionalTests.ExtensionMembers
             [Projectable]
             public int Multiply(int factor) => e.Id * factor;
         }
+
+        extension (GenericWrapper<Entity> w)
+        {
+            /// <summary>
+            /// Extension member method that multiplies the wrapped entity's ID by a factor.
+            /// </summary>
+            [Projectable]
+            public int MultiplyWrapped(int factor) => w.Wrapped.Id * factor;
+        }
     }
 
     public static class IntExtensions
