@@ -146,4 +146,47 @@ class EntityBase<TId> where TId : ICloneable, new() {
 
         return Verifier.Verify(result.GeneratedTrees[0].ToString());
     }
+
+    /// <summary>
+    /// Regression test for the runtime resolver bug where methods in a generic class
+    /// with generic type-parameter parameters were not resolved.
+    /// The source generator part was always correct;
+    /// the failing side was the runtime resolver (fixed in ProjectionExpressionResolver).
+    /// </summary>
+    [Fact]
+    public Task GenericClassMethodsWithClassTypeParameterAsMethodParameter()
+    {
+        var compilation = CreateCompilation(@"
+using System;
+using System.Linq;
+using System.Collections.Generic;
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    public class Address {
+        public string DisplayName { get; set; }
+    }
+
+    public class ContactAddress<TType> where TType : struct, System.Enum {
+        public TType Type { get; set; }
+        public Address Address { get; set; }
+    }
+
+    public class Contact<TType> where TType : struct, System.Enum {
+        public IList<ContactAddress<TType>> Addresses { get; set; }
+
+        [Projectable]
+        public string GetDisplayNameByType(TType type) =>
+            Addresses.Where(a => a.Type.Equals(type)).Select(a => a.Address.DisplayName).FirstOrDefault();
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
 }
