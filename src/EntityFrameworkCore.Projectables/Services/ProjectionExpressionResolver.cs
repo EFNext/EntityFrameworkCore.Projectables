@@ -266,6 +266,21 @@ namespace EntityFrameworkCore.Projectables.Services
                 // For generic methods, use the generic definition so type parameters (TEntity, etc.)
                 // are used instead of the concrete closed-generic arguments.
                 var methodToInspect = method.IsGenericMethod ? method.GetGenericMethodDefinition() : method;
+
+                // When the containing type was converted to its generic type definition above,
+                // also obtain the method as it appears on that definition so that class-level
+                // generic type parameters (e.g. TTypeContactAddress) are used as parameter types
+                // instead of the concrete closed-generic type arguments (e.g. ConcreteAddressType).
+                // Without this, the generated class name computed here won't match the one produced
+                // by the source generator, causing resolution to silently fail.
+                if (declaringType.IsGenericTypeDefinition && methodToInspect.DeclaringType != declaringType)
+                {
+                    if (MethodBase.GetMethodFromHandle(methodToInspect.MethodHandle, declaringType.TypeHandle) is MethodInfo openMethod)
+                    {
+                        methodToInspect = openMethod;
+                    }
+                }
+
                 var parameters = methodToInspect.GetParameters();
 
                 if (parameters.Length > 0)
@@ -281,7 +296,18 @@ namespace EntityFrameworkCore.Projectables.Services
             {
                 // Constructors are stored under the synthetic name "_ctor".
                 memberLookupName = "_ctor";
-                var parameters = ctor.GetParameters();
+
+                // Get the constructor as seen from the generic type definition so parameter types use generic type parameters.
+                var ctorToInspect = ctor;
+                if (declaringType.IsGenericTypeDefinition && ctor.DeclaringType != declaringType)
+                {
+                    if (MethodBase.GetMethodFromHandle(ctor.MethodHandle, declaringType.TypeHandle) is ConstructorInfo openCtor)
+                    {
+                        ctorToInspect = openCtor;
+                    }
+                }
+
+                var parameters = ctorToInspect.GetParameters();
 
                 if (parameters.Length > 0)
                 {
