@@ -154,7 +154,7 @@ class EntityBase<TId> where TId : ICloneable, new() {
     /// the failing side was the runtime resolver (fixed in ProjectionExpressionResolver).
     /// </summary>
     [Fact]
-    public Task GenericClassMethodsWithTypeParameterParameter()
+    public Task GenericClassMethodsWithClassTypeParameterAsMethodParameter()
     {
         var compilation = CreateCompilation(@"
 using System;
