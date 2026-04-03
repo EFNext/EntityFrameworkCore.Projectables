@@ -1,31 +1,30 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
-using EntityFrameworkCore.Projectables.Extensions;
+﻿using EntityFrameworkCore.Projectables.Extensions;
+using EntityFrameworkCore.Projectables.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using ReadmeSample.Entities;
 
-namespace ReadmeSample
+namespace ReadmeSample;
+
+public class ApplicationDbContext : DbContext
 {
-    public class ApplicationDbContext : DbContext
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        public DbSet<User> Users { get; set; }
-        public DbSet<Product> Products { get; set; }
-        public DbSet<Order> Orders { get; set; }
+        optionsBuilder.UseSqlite("Data Source=ReadmeSample.db");
 
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            optionsBuilder.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=ReadmeSample;Trusted_Connection=True");
-            optionsBuilder.UseProjectables();
-        }
+        // Feature 10: Compatibility mode
+        // Full (default) — expands every query on each invocation; maximum compatibility.
+        // Limited        — expands once, then caches; better performance for repeated queries.
+        //   Switch with: optionsBuilder.UseProjectables(p => p.CompatibilityMode(CompatibilityMode.Limited));
+        optionsBuilder.UseProjectables();
+    }
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<OrderItem>().HasKey(x => new { x.OrderId, x.ProductId });
-        }
-
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<OrderItem>().HasKey(x => new { x.OrderId, x.ProductId });
     }
 }

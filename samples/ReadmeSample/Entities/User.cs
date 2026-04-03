@@ -1,16 +1,10 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿namespace ReadmeSample.Entities;
 
-namespace ReadmeSample.Entities
+public class User
 {
-    public class User
-    {
-        public int Id { get; set; }
+    public int Id { get; set; }
+    public required string UserName { get; set; }
+    public required string EmailAddress { get; set; }
 
-        public string UserName { get; set; }
-
-        public string EmailAddress { get; set; }
-
-        public ICollection<Order> Orders { get; set; }
-    }
+    public ICollection<Order> Orders { get; set; } = [];
 }
