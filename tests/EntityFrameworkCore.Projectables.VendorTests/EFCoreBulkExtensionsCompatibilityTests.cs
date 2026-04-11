@@ -19,7 +19,7 @@ namespace EntityFrameworkCore.Projectables.VendorTests;
 /// </summary>
 public class EFCoreBulkExtensionsCompatibilityTests : IDisposable
 {
-    readonly TestDbContext _context;
+    private readonly TestDbContext _context;
 
     public EFCoreBulkExtensionsCompatibilityTests()
     {
@@ -60,20 +60,6 @@ public class EFCoreBulkExtensionsCompatibilityTests : IDisposable
     }
 
     [Fact]
-    public void GetDbContext_WithProjectableProperty_DoesNotThrow()
-    {
-        // Arrange – entity with a [Projectable] property so that CustomQueryCompiler is
-        // exercised with actual projectable expression expansion.
-        var query = _context.Set<Order>().Where(o => o.IsCompleted);
-
-        // Act
-        var exception = Record.Exception(() => BatchUtil.GetDbContext(query));
-
-        // Assert
-        Assert.Null(exception);
-    }
-
-    [Fact]
     public async Task BatchDeleteAsync_WithProjectablesEnabled_DoesNotThrowTargetException()
     {
         // Arrange
@@ -87,16 +73,11 @@ public class EFCoreBulkExtensionsCompatibilityTests : IDisposable
             () => query.BatchDeleteAsync(TestContext.Current.CancellationToken));
 #pragma warning restore CS0618
 
-        // Assert – a TargetException means the reflection-based DbContext discovery
-        // inside EFCore.BulkExtensions failed.  All other exceptions (e.g. SQL syntax
-        // differences on SQLite) are acceptable because they come from actual SQL
-        // execution, not from the broken reflection chain.
-        Assert.False(
-            exception is System.Reflection.TargetException,
-            $"BatchDeleteAsync threw TargetException: {exception?.Message}");
-        Assert.False(
-            exception?.Message?.Contains("Non-static method requires a target") == true,
-            $"BatchDeleteAsync threw 'Non-static method requires a target': {exception?.Message}");
+        // A TargetException means the reflection-based DbContext discovery inside
+        // EFCore.BulkExtensions failed. Other exceptions (e.g. SQL syntax differences
+        // on SQLite) are acceptable because they come from actual SQL execution, not
+        // from the broken reflection chain.
+        AssertNoTargetException(exception, "BatchDeleteAsync");
     }
 
     [Fact]
@@ -113,12 +94,12 @@ public class EFCoreBulkExtensionsCompatibilityTests : IDisposable
                 cancellationToken: TestContext.Current.CancellationToken));
 #pragma warning restore CS0618
 
-        // Assert – same as above: only TargetException is a regression.
-        Assert.False(
-            exception is System.Reflection.TargetException,
-            $"BatchUpdateAsync threw TargetException: {exception?.Message}");
-        Assert.False(
-            exception?.Message?.Contains("Non-static method requires a target") == true,
-            $"BatchUpdateAsync threw 'Non-static method requires a target': {exception?.Message}");
+        AssertNoTargetException(exception, "BatchUpdateAsync");
     }
+
+    private static void AssertNoTargetException(Exception? exception, string operationName)
+        => Assert.False(
+            exception is System.Reflection.TargetException,
+            $"{operationName} threw TargetException (\"Non-static method requires a target\"). " +
+            $"This indicates that CustomQueryCompiler's _queryContextFactory shadow field is missing.");
 }

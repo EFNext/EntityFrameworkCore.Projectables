@@ -24,7 +24,7 @@ public class TestDbContext : DbContext
 {
     // Keep the connection open for the lifetime of the context so the in-memory
     // SQLite database is not destroyed between operations.
-    readonly SqliteConnection _connection;
+    private readonly SqliteConnection _connection;
 
     public TestDbContext()
     {
