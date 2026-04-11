@@ -22,6 +22,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageVersion Include="EFCore.BulkExtensions" Version="8.0.4" />
     <PackageVersion Include="coverlet.collector" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />

@@ -26,6 +26,18 @@ namespace EntityFrameworkCore.Projectables.Infrastructure.Internal
         readonly IQueryCompiler _decoratedQueryCompiler;
         readonly ProjectableExpressionReplacer _projectableExpressionReplacer;
 
+        // This field intentionally shadows the private field of the same name in QueryCompiler.
+        // Some third-party libraries (e.g. EFCore.BulkExtensions) discover the DbContext by
+        // calling obj.GetType().GetField("_queryContextFactory", BindingFlags.Instance | BindingFlags.NonPublic)
+        // on the IQueryCompiler instance. Because C# reflection does not surface private fields
+        // declared in a base class when searching a derived type, without this shadow field the
+        // lookup returns null and causes a TargetException ("Non-static method requires a target")
+        // in those libraries. Storing the same value here makes the field discoverable via
+        // reflection regardless of which type the caller starts from.
+#pragma warning disable IDE0052 // Remove unread private members
+        private readonly IQueryContextFactory _queryContextFactory;
+#pragma warning restore IDE0052
+
         public CustomQueryCompiler(IQueryCompiler decoratedQueryCompiler,
             IQueryContextFactory queryContextFactory,
             ICompiledQueryCache compiledQueryCache,
@@ -44,6 +56,7 @@ namespace EntityFrameworkCore.Projectables.Infrastructure.Internal
             evaluatableExpressionFilter,
             model)
         {
+            _queryContextFactory = queryContextFactory;
             _decoratedQueryCompiler = decoratedQueryCompiler;
             var trackingByDefault = (contextOptions.FindExtension<CoreOptionsExtension>()?.QueryTrackingBehavior ?? QueryTrackingBehavior.TrackAll) ==
                                     QueryTrackingBehavior.TrackAll;
