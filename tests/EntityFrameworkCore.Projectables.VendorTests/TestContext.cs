@@ -12,7 +12,7 @@ public class Order
     public bool IsCompleted { get; set; }
 
     /// <summary>
-    /// A computed projectable property. Having at least one [Projectable] writable
+    /// A computed projectable property. Having at least one [Projectable] read-only
     /// property on the entity ensures that <c>CustomQueryCompiler</c> is exercised
     /// (it expands the projectable reference and potentially adds a Select wrapper).
     /// </summary>
