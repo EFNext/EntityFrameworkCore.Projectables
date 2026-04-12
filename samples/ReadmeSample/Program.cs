@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using ReadmeSample;
 using ReadmeSample.Dtos;
-using ReadmeSample.Entities;
 using ReadmeSample.Extensions;
 using Spectre.Console;
 using static ReadmeSample.ConsoleHelper;
@@ -22,32 +21,6 @@ AnsiConsole.Write(new Panel(
 // Bootstrap
 // ─────────────────────────────────────────────────────────────────────────────
 await using var dbContext = new ApplicationDbContext();
-dbContext.Database.EnsureDeleted();
-dbContext.Database.EnsureCreated();
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Seed data
-// ─────────────────────────────────────────────────────────────────────────────
-var user     = new User { UserName = "Jon", EmailAddress = "jon@doe.com" };
-var supplier = new Supplier { Name = "Acme Stationery" };
-var pen      = new Product { Name = "Blue Pen",    ListPrice = 1.50m,  Supplier = supplier };
-var book     = new Product { Name = "C# in Depth", ListPrice = 35.99m };   // no supplier → null-conditional demo
-
-var fulfilledOrder = new Order
-{
-    User = user, TaxRate = .19m, Status = OrderStatus.Fulfilled,
-    CreatedDate = DateTime.UtcNow.AddDays(-2), FulfilledDate = DateTime.UtcNow.AddDays(-1),
-    Items = [new OrderItem { Product = pen, Quantity = 5 }, new OrderItem { Product = book, Quantity = 1 }],
-};
-var pendingOrder = new Order
-{
-    User = user, TaxRate = .19m, Status = OrderStatus.Pending,
-    CreatedDate = DateTime.UtcNow, FulfilledDate = null,
-    Items = [new OrderItem { Product = pen, Quantity = 2 }],
-};
-
-dbContext.AddRange(user, supplier, pen, book, fulfilledOrder, pendingOrder);
-dbContext.SaveChanges();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Feature 1 — Properties & methods
@@ -61,15 +34,6 @@ var totalsQuery = dbContext.Orders.Select(o => new
 });
 
 ShowSql(totalsQuery.ToQueryString());
-foreach (var row in totalsQuery)
-{
-    AnsiConsole.MarkupLine(
-        $"  [dim]Order #{row.Id}[/]"
-        + $"  subtotal={Money(row.Subtotal)}"
-        + $"  tax={Money(row.Tax)}"
-        + $"  grand total={Money(row.GrandTotal)}"
-        + $"  [dim]−10%[/]={Money(row.Discounted10Pct)}");
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Feature 2 — Extension methods
@@ -81,9 +45,6 @@ var recentQuery = dbContext.Users
     .Select(u => new { u.UserName, LatestOrderGrandTotal = u.GetMostRecentOrder()!.GrandTotal });
 
 ShowSql(recentQuery.ToQueryString());
-var recent = recentQuery.First();
-AnsiConsole.MarkupLine(
-    $"  [white]{Markup.Escape(recent.UserName)}[/]'s most recent order: {Money(recent.LatestOrderGrandTotal)}");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Feature 3 — Constructor projections
@@ -93,14 +54,6 @@ Section(3, "Constructor projections  →  new OrderSummaryDto(o)");
 var dtoQuery = dbContext.Orders.Select(o => new OrderSummaryDto(o));
 
 ShowSql(dtoQuery.ToQueryString());
-foreach (var dto in dtoQuery)
-{
-    AnsiConsole.MarkupLine(
-        $"  [dim]#{dto.Id}[/] [white]{Markup.Escape(dto.UserName ?? "")}[/]"
-        + $" — {Money(dto.GrandTotal)}"
-        + $"  status={StatusMark(dto.StatusName)}"
-        + $"  priority={PriorityMark(dto.PriorityLabel)}");
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Feature 4 — Method overloads
@@ -112,9 +65,6 @@ var withPendingQuery = dbContext.Users
     .Select(u => new { u.UserName, LatestAnyOrderTotal = u.GetMostRecentOrderForUser(true)!.GrandTotal });
 
 ShowSql(withPendingQuery.ToQueryString());
-var withPending = withPendingQuery.First();
-AnsiConsole.MarkupLine(
-    $"  [white]{Markup.Escape(withPending.UserName)}[/]'s most recent order (incl. pending): {Money(withPending.LatestAnyOrderTotal)}");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Feature 5 — Pattern matching
@@ -124,11 +74,6 @@ Section(5, "Pattern matching  →  switch expression becomes SQL CASE WHEN");
 var priorityQuery = dbContext.Orders.Select(o => new { o.Id, o.GrandTotal, o.PriorityLabel });
 
 ShowSql(priorityQuery.ToQueryString());
-foreach (var row in priorityQuery)
-{
-    AnsiConsole.MarkupLine(
-        $"  [dim]Order #{row.Id}[/]  {Money(row.GrandTotal)} → priority={PriorityMark(row.PriorityLabel)}");
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Feature 6 — Block-bodied members
@@ -138,11 +83,6 @@ Section(6, "Block-bodied members  →  AllowBlockBody = true");
 var shippingQuery = dbContext.Orders.Select(o => new { o.Id, ShippingCategory = o.GetShippingCategory() });
 
 ShowSql(shippingQuery.ToQueryString());
-foreach (var row in shippingQuery)
-{
-    AnsiConsole.MarkupLine(
-        $"  [dim]Order #{row.Id}[/]  shipping=[bold]{Markup.Escape(row.ShippingCategory)}[/]");
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Feature 7 — Null-conditional rewriting
@@ -152,13 +92,6 @@ Section(7, "Null-conditional rewriting  →  NullConditionalRewriteSupport.Ignor
 var supplierQuery = dbContext.Products.Select(p => new { p.Name, p.SupplierName });
 
 ShowSql(supplierQuery.ToQueryString());
-foreach (var row in supplierQuery)
-{
-    var sup = row.SupplierName is null
-        ? "[dim](none)[/]"
-        : $"[bold green]{Markup.Escape(row.SupplierName)}[/]";
-    AnsiConsole.MarkupLine($"  [white]{Markup.Escape(row.Name)}[/]  supplier={sup}");
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Feature 8 — Enum method expansion
@@ -168,11 +101,6 @@ Section(8, "Enum method expansion  →  ExpandEnumMethods = true");
 var statusQuery = dbContext.Orders.Select(o => new { o.Id, o.Status, o.StatusDisplayName });
 
 ShowSql(statusQuery.ToQueryString());
-foreach (var row in statusQuery)
-{
-    AnsiConsole.MarkupLine(
-        $"  [dim]Order #{row.Id}[/]  [dim]{row.Status}[/] → {StatusMark(row.StatusDisplayName)}");
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Feature 9 — UseMemberBody
@@ -182,11 +110,6 @@ Section(9, "UseMemberBody  →  expression sourced from a private member");
 var highValueQuery = dbContext.Orders.Select(o => new { o.Id, o.GrandTotal, o.IsHighValueOrder });
 
 ShowSql(highValueQuery.ToQueryString());
-foreach (var row in highValueQuery)
-{
-    AnsiConsole.MarkupLine(
-        $"  [dim]Order #{row.Id}[/]  {Money(row.GrandTotal)} → high-value={BoolMark(row.IsHighValueOrder)}");
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Feature 10 — Compatibility mode

@@ -6,7 +6,7 @@ namespace ReadmeSample.Extensions;
 public static class UserExtensions
 {
     /// <summary>
-    /// Returns the most recent fulfilled order for the user.
+    /// Returns the most recent order for the user.
     /// Matches the README example — inlined into SQL via [Projectable].
     /// </summary>
     [Projectable]

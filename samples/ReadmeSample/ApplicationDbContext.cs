@@ -1,6 +1,4 @@
-﻿using EntityFrameworkCore.Projectables.Extensions;
-using EntityFrameworkCore.Projectables.Infrastructure;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ReadmeSample.Entities;
 
 namespace ReadmeSample;
@@ -14,7 +12,7 @@ public class ApplicationDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseSqlite("Data Source=ReadmeSample.db");
+        optionsBuilder.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=ReadmeSample;Trusted_Connection=True");
 
         // Feature 10: Compatibility mode
         // Full (default) — expands every query on each invocation; maximum compatibility.
