@@ -49,7 +49,7 @@ jobs:
           dotnet-version: 10.0.x
       - name: Pack
         run: | 
-          dotnet pack -v normal -c Debug --include-symbols --include-source -p:PackageVersion=5.0.0-pre-$GITHUB_RUN_ID -o nupkg 
+          dotnet pack -v normal -c Debug --include-symbols --include-source -p:PackageVersion=6.1.0-pre-$GITHUB_RUN_ID -o nupkg 
       - name: Push to GitHub Feed
         run: |
           for f in ./nupkg/*.nupkg
