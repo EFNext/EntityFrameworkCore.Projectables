@@ -1,0 +1,3 @@
+﻿SELECT [e].[Id], [e].[Id] * 3
+FROM [Entity] AS [e]
+WHERE [e].[Id] > 0
