@@ -10,7 +10,7 @@ using static ReadmeSample.ConsoleHelper;
 // ─────────────────────────────────────────────────────────────────────────────
 AnsiConsole.Write(new Panel(
     "[bold yellow]EntityFrameworkCore.Projectables[/] — Feature Tour\n"
-    + "[dim]SQ Server · .NET 10 · All 11 features from the README demonstrated[/]")
+    + "[dim]SQL Server · .NET 10 · All 11 features from the README demonstrated[/]")
 {
     Border = BoxBorder.Double,
     BorderStyle = Style.Parse("yellow dim"),
