@@ -21,7 +21,7 @@ public static class QueryableExtensions
     /// <para>
     /// This method currently delegates to <see cref="ExpandProjectables{TModel}(IQueryable{TModel})"/> and does
     /// not override the root-rewrite guard for queries that already contain an explicit <c>AsTracking()</c> call
-    /// in the expression tree. As a result, <c>query.AsTracking().AsExpandedProperties()</c> does not currently
+    /// in the expression tree. As a result, <c>query.AsTracking().WithProjectables()</c> does not currently
     /// force projection injection.
     /// </para>
     /// <para>
@@ -29,7 +29,7 @@ public static class QueryableExtensions
     /// because EF Core's materializer cannot set them on the resulting entity.
     /// </para>
     /// </summary>
-    public static IQueryable<TModel> AsExpandedProperties<TModel>(this IQueryable<TModel> query)
+    public static IQueryable<TModel> WithProjectables<TModel>(this IQueryable<TModel> query)
         where TModel : class
         => query.ExpandProjectables();
 }

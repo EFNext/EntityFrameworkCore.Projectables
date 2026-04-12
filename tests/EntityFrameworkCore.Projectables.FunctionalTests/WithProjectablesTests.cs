@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EntityFrameworkCore.Projectables.FunctionalTests;
 
-public class AsExpandedPropertiesTests
+public class WithProjectablesTests
 {
     /// <summary>
     /// Entity with both a read-only and a writable projectable property.
@@ -33,12 +33,12 @@ public class AsExpandedPropertiesTests
     [Fact]
     public Task TrackingContext_QueryRoot_InjectsWritableProjectableProperties()
     {
-        // Tracking context: without AsExpandedProperties() the auto-inject is suppressed.
-        // AsExpandedProperties() forces the Select injection regardless of tracking mode.
+        // Tracking context: without WithProjectables() the auto-inject is suppressed.
+        // WithProjectables() forces the Select injection regardless of tracking mode.
         // ReadOnlyComputed is absent from SELECT (no setter); WritableComputed is present.
         using var dbContext = new SampleDbContext<Entity>(queryTrackingBehavior: QueryTrackingBehavior.TrackAll);
 
-        var query = dbContext.Set<Entity>().AsExpandedProperties();
+        var query = dbContext.Set<Entity>().WithProjectables();
 
         return Verifier.Verify(query.ToQueryString());
     }
@@ -46,13 +46,13 @@ public class AsExpandedPropertiesTests
     [Fact]
     public Task TrackingContext_WithWhere_InjectsProjectablePropertiesAfterFilter()
     {
-        // Verifies that AsExpandedProperties() wraps the Where clause (not the raw root),
+        // Verifies that WithProjectables() wraps the Where clause (not the raw root),
         // so the generated SQL contains WHERE and SELECT in the correct order.
         using var dbContext = new SampleDbContext<Entity>(queryTrackingBehavior: QueryTrackingBehavior.TrackAll);
 
         var query = dbContext.Set<Entity>()
             .Where(e => e.Id > 0)
-            .AsExpandedProperties();
+            .WithProjectables();
 
         return Verifier.Verify(query.ToQueryString());
     }
@@ -61,10 +61,10 @@ public class AsExpandedPropertiesTests
     public Task NoTrackingContext_QueryRoot_InjectsProjectableProperties()
     {
         // NoTracking context: auto-inject already happens automatically via UseProjectables();
-        // calling AsExpandedProperties() explicitly should produce the same result.
+        // calling WithProjectables() explicitly should produce the same result.
         using var dbContext = new SampleDbContext<Entity>(queryTrackingBehavior: QueryTrackingBehavior.NoTracking);
 
-        var query = dbContext.Set<Entity>().AsExpandedProperties();
+        var query = dbContext.Set<Entity>().WithProjectables();
 
         return Verifier.Verify(query.ToQueryString());
     }
