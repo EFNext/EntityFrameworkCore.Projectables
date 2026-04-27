@@ -66,6 +66,7 @@ static internal partial class ProjectableInterpreter
         ISymbol memberSymbol,
         ProjectableDescriptor descriptor)
     {
+#if ROSLYN_5_0_OR_LATER
         if (memberSymbol.ContainingType is not { IsExtension: true } extensionType
             || extensionType.TypeParameters.IsDefaultOrEmpty)
         {
@@ -95,6 +96,7 @@ static internal partial class ProjectableInterpreter
             descriptor.ConstraintClauses ??= SyntaxFactory.List<TypeParameterConstraintClauseSyntax>();
             descriptor.ConstraintClauses = descriptor.ConstraintClauses.Value.Add(BuildConstraintClause(tp));
         }
+#endif
     }
 
     /// <summary>

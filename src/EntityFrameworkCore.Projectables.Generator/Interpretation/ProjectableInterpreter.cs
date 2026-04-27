@@ -34,6 +34,7 @@ static internal partial class ProjectableInterpreter
         }
 
         // 2. Detect C# 14 extension member context
+#if ROSLYN_5_0_OR_LATER
         var isExtensionMember = memberSymbol.ContainingType is { IsExtension: true };
         IParameterSymbol? extensionParameter = null;
         ITypeSymbol? extensionReceiverType = null;
@@ -43,6 +44,11 @@ static internal partial class ProjectableInterpreter
             extensionParameter = extensionType.ExtensionParameter;
             extensionReceiverType = extensionParameter?.Type;
         }
+#else
+        var isExtensionMember = false;
+        IParameterSymbol? extensionParameter = null;
+        ITypeSymbol? extensionReceiverType = null;
+#endif
 
         // 3. Create syntax rewriters
         var targetTypeForRewriting = isExtensionMember && extensionReceiverType is INamedTypeSymbol receiverNamedType

@@ -16,7 +16,7 @@ namespace EntityFrameworkCore.Projectables.CodeFixes;
 [Shared]
 public sealed class BlockBodyExperimentalCodeFixProvider : CodeFixProvider
 {
-    public override ImmutableArray<string> FixableDiagnosticIds => ["EFP0001"];
+    public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create("EFP0001");
 
     public override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 

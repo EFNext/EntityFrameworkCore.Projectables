@@ -78,7 +78,11 @@ static internal partial class ProjectableInterpreter
         {
             if (memberSymbol is IMethodSymbol exprCheckMethod)
             {
+#if ROSLYN_5_0_OR_LATER
                 var isExtensionBlock = memberSymbol.ContainingType is { IsExtension: true };
+#else
+                var isExtensionBlock = false;
+#endif
                 var hasImplicitThis = !exprCheckMethod.IsStatic || isExtensionBlock;
                 var expectedFuncArgCount = exprCheckMethod.Parameters.Length + (hasImplicitThis ? 2 : 1);
 
@@ -88,9 +92,14 @@ static internal partial class ProjectableInterpreter
                 ITypeSymbol? expectedReceiverType = null;
                 if (hasImplicitThis)
                 {
-                    expectedReceiverType = isExtensionBlock
-                        ? exprCheckMethod.ContainingType.ExtensionParameter?.Type
-                        : exprCheckMethod.ContainingType;
+                    expectedReceiverType =
+#if ROSLYN_5_0_OR_LATER
+                        isExtensionBlock
+                            ? exprCheckMethod.ContainingType.ExtensionParameter?.Type
+                            : exprCheckMethod.ContainingType;
+#else
+                        exprCheckMethod.ContainingType;
+#endif
                 }
 
                 compatibleExprPropertyCandidates = exprPropertyCandidates.Where(x =>

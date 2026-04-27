@@ -1,5 +1,21 @@
 <Project>
   <PropertyGroup>
+    <!--
+      RoslynAnalyzerVersion controls which Roslyn version the source generator is compiled against.
+      Auto-detected from the .NET SDK major version encoded in $(MSBuildSDKsPath):
+        - SDK 10+ → 5.0.0  (full C# 14 extension-member support; ROSLYN_5_0_OR_LATER is defined)
+        - SDK 9   → 4.14.0 (no C# 14; the generator DLL loads on SDK 9 and SDK 10)
+      Override at the CLI: dotnet build -p:RoslynAnalyzerVersion=4.14.0
+    -->
+    <!-- Extract the SDK major version from the path (e.g. "…\sdk\10.0.203\Sdks" → "10") -->
+    <_DotNetSdkMajorVersion>$([System.Text.RegularExpressions.Regex]::Match('$(MSBuildSDKsPath)', '[\\/]sdk[\\/](\d+)\.').Groups[1].Value)</_DotNetSdkMajorVersion>
+    <!-- SDK 10+ ships Roslyn 5.0 — auto-enable full C# 14 support -->
+    <RoslynAnalyzerVersion Condition="'$(RoslynAnalyzerVersion)' == '' AND '$(_DotNetSdkMajorVersion)' != '' AND $([MSBuild]::VersionGreaterThanOrEquals('$(_DotNetSdkMajorVersion).0.0', '10.0.0'))">5.0.0</RoslynAnalyzerVersion>
+    <!-- SDK 9 or unknown: Roslyn 4.14.0 is safe on both SDK 9 and SDK 10 hosts -->
+    <RoslynAnalyzerVersion Condition="'$(RoslynAnalyzerVersion)' == ''">4.14.0</RoslynAnalyzerVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
 	<TargetFrameworks>net8.0;net10.0</TargetFrameworks>
 	<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 	<LangVersion>12.0</LangVersion>
