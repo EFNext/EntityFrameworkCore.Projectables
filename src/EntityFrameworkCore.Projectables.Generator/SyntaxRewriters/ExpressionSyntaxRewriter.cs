@@ -123,6 +123,7 @@ internal partial class ExpressionSyntaxRewriter : CSharpSyntaxRewriter
     public override SyntaxNode? VisitIdentifierName(IdentifierNameSyntax node)
     {
         // Handle C# 14 extension parameter replacement (e.g., `e` in `extension(Entity e)` becomes `@this`)
+#if ROSLYN_5_0_OR_LATER
         if (_extensionParameterName is not null && node.Identifier.Text == _extensionParameterName)
         {
             var symbol = _semanticModel.GetSymbolInfo(node).Symbol;
@@ -135,7 +136,7 @@ internal partial class ExpressionSyntaxRewriter : CSharpSyntaxRewriter
                     .WithTrailingTrivia(node.GetTrailingTrivia());
             }
         }
-
+#endif
         var identifierSymbol = _semanticModel.GetSymbolInfo(node).Symbol;
         if (identifierSymbol is not null)
         {

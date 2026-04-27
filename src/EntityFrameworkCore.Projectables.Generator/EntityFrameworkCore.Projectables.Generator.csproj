@@ -8,6 +8,14 @@
 	<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
   </PropertyGroup>
 
+  <!-- Define ROSLYN_5_0_OR_LATER when building with .NET SDK 10+ (NETCoreSdkVersion is set by
+       Microsoft.NET.Sdk.props, which runs before this project file body is evaluated).
+       This enables C# 14 extension-type support in the generator code.
+       On SDK 9 the constant is absent and extension block members are skipped safely. -->
+  <PropertyGroup Condition="'$(NETCoreSdkVersion)' != '' AND $([MSBuild]::VersionGreaterThanOrEquals('$(NETCoreSdkVersion)', '10.0.0'))">
+    <DefineConstants>$(DefineConstants);ROSLYN_5_0_OR_LATER</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
 	<Compile Include="..\EntityFrameworkCore.Projectables.Abstractions\NullConditionalRewriteSupport.cs" Link="Infrastructure\NullConditionalRewriteSupport.cs" />
 	<Compile Include="..\EntityFrameworkCore.Projectables\Services\ProjectionExpressionClassNameGenerator.cs" Link="Infrastructure\ProjectionExpressionClassNameGenerator.cs" />

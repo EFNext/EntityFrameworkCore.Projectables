@@ -20,7 +20,7 @@ namespace EntityFrameworkCore.Projectables.CodeFixes;
 public sealed class FactoryMethodToCtorCodeFixProvider : CodeFixProvider
 {
     /// <inheritdoc />
-    public override ImmutableArray<string> FixableDiagnosticIds => ["EFP0012"];
+    public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create("EFP0012");
 
     /// <inheritdoc />
     public override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;

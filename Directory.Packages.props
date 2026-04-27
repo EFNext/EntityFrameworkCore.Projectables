@@ -1,6 +1,9 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- RoslynAnalyzerVersion is auto-detected in Directory.Build.props (SDK 10+ → 5.0.0, SDK 9 → 4.14.0).
+         The fallback here covers any edge case where Directory.Build.props runs after this file. -->
+    <RoslynAnalyzerVersion Condition="'$(RoslynAnalyzerVersion)' == ''">4.14.0</RoslynAnalyzerVersion>
   </PropertyGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
@@ -26,8 +29,8 @@
     <PackageVersion Include="EFCore.BulkExtensions" Version="8.0.4" />
     <PackageVersion Include="coverlet.collector" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.8.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="$(RoslynAnalyzerVersion)" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="$(RoslynAnalyzerVersion)" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.3.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />

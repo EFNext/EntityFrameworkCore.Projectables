@@ -120,7 +120,11 @@ static internal partial class ProjectableInterpreter
         // implicit @this receiver parameter.  If the expression property lambda uses a
         // different parameter name (e.g. c => c.Value > 0), rename it so the generated
         // code references @this instead of an undefined identifier.
+#if ROSLYN_5_0_OR_LATER
         var isExtensionMember = memberSymbol.ContainingType is { IsExtension: true };
+#else
+        var isExtensionMember = false;
+#endif
         var hasImplicitReceiver = isExtensionMember
             || !originalMethodDecl.Modifiers.Any(SyntaxKind.StaticKeyword);
 

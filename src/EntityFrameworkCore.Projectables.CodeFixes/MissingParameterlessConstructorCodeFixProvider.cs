@@ -19,7 +19,7 @@ namespace EntityFrameworkCore.Projectables.CodeFixes;
 [Shared]
 public sealed class MissingParameterlessConstructorCodeFixProvider : CodeFixProvider
 {
-    public override ImmutableArray<string> FixableDiagnosticIds => ["EFP0008"];
+    public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create("EFP0008");
 
     public override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 

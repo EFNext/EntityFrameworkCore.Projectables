@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 using System.Text;
 using EntityFrameworkCore.Projectables.CodeFixes;
 using EntityFrameworkCore.Projectables.Generator.Comparers;
+using EntityFrameworkCore.Projectables.Generator.Infrastructure;
 using EntityFrameworkCore.Projectables.Generator.Interpretation;
 using EntityFrameworkCore.Projectables.Generator.Models;
 using EntityFrameworkCore.Projectables.Generator.Registry;
@@ -71,6 +72,16 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
             static (spc, source) =>
             {
                 var ((member, attribute, globalOptions), compilation) = source;
+
+#if !ROSLYN_5_0_OR_LATER
+                // C# 14 extension block members have a parent that is NOT a class/struct/interface/record.
+                // Without ROSLYN_5_0_OR_LATER support, skip them gracefully to avoid generating invalid code.
+                if (!IsInsideKnownMemberContainer(member))
+                {
+                    return;
+                }
+#endif
+
                 var semanticModel = compilation.GetSemanticModel(member.SyntaxTree);
                 var memberSymbol = semanticModel.GetDeclaredSymbol(member);
 
@@ -86,6 +97,14 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
         var registryEntries = compilationAndMemberPairs.Select(
             static (source, cancellationToken) => {
                 var ((member, _, _), compilation) = source;
+
+#if !ROSLYN_5_0_OR_LATER
+                // Same guard: skip C# 14 extension block members that we can't handle without Roslyn 5.0.
+                if (!IsInsideKnownMemberContainer(member))
+                {
+                    return null;
+                }
+#endif
 
                 var semanticModel = compilation.GetSemanticModel(member.SyntaxTree);
                 var memberSymbol = semanticModel.GetDeclaredSymbol(member, cancellationToken);
@@ -308,6 +327,25 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
         }
     }
 
+#if !ROSLYN_5_0_OR_LATER
+    /// <summary>
+    /// Returns <c>true</c> when the member is directly inside a known C# type body
+    /// (class, struct, interface, or record).
+    /// <para>
+    /// C# 14 extension block members (<c>extension(T t) { … }</c>) have a parent node that is
+    /// NOT one of these types.  Because full support for extension members requires
+    /// <c>ROSLYN_5_0_OR_LATER</c>, this helper is used as an early-exit guard so that the
+    /// generator never attempts to emit code for members it cannot handle, avoiding CS1520 /
+    /// CS0710 compile errors in the generated files.
+    /// </para>
+    /// </summary>
+    private static bool IsInsideKnownMemberContainer(MemberDeclarationSyntax member)
+        => member.Parent is ClassDeclarationSyntax
+            or StructDeclarationSyntax
+            or InterfaceDeclarationSyntax
+            or RecordDeclarationSyntax;
+#endif
+
     /// <summary>
     /// Extracts a <see cref="ProjectionRegistryEntry"/> from a member declaration.
     /// Returns null when the member does not have [Projectable], is an extension member,
@@ -318,10 +356,12 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
         var containingType = memberSymbol.ContainingType;
 
         // Skip C# 14 extension type members — they require special handling (fall back to reflection)
+#if ROSLYN_5_0_OR_LATER
         if (containingType is { IsExtension: true })
         {
             return null;
         }
+#endif
 
         // Skip generic classes: the registry only supports closed constructed types.
         if (containingType.TypeParameters.Length > 0)
@@ -353,9 +393,9 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
                 memberLookupName = memberSymbol.Name;
             }
 
-            parameterTypeNames = [
-                ..methodSymbol.Parameters.Select(p => p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
-            ];
+            parameterTypeNames = methodSymbol.Parameters
+                .Select(p => p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                .ToImmutableArray();
         }
         else
         {

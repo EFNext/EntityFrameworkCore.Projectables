@@ -20,7 +20,7 @@ namespace EntityFrameworkCore.Projectables.CodeFixes;
 [Shared]
 public sealed class NullConditionalRewriteUnsupportedCodeFixProvider : CodeFixProvider
 {
-    public override ImmutableArray<string> FixableDiagnosticIds => ["EFP0002"];
+    public override ImmutableArray<string> FixableDiagnosticIds => ImmutableArray.Create("EFP0002");
 
     public override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 
