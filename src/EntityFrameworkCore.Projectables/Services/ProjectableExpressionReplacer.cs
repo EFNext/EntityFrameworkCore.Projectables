@@ -341,15 +341,14 @@ namespace EntityFrameworkCore.Projectables.Services
                 return node;
             }
 
-            var properties = entityType.GetProperties()
+            var members = entityType.GetProperties()
                 .Where(x => !x.IsShadowProperty())
-                .Select(x => x.GetMemberInfo(false, false))
+                .Cast<IPropertyBase>()
                 .Concat(entityType.GetNavigations()
-                    .Where(x => !x.IsShadowProperty())
-                    .Select(x => x.GetMemberInfo(false, false)))
+                    .Where(x => !x.IsShadowProperty()))
                 .Concat(entityType.GetSkipNavigations()
-                    .Where(x => !x.IsShadowProperty())
-                    .Select(x => x.GetMemberInfo(false, false)))
+                    .Where(x => !x.IsShadowProperty()))
+                .Select(x => x.GetMemberInfo(false, false))
                 // Remove projectable properties from the ef properties. Since properties returned here for auto
                 // properties (like `public string Test {get;set;}`) are generated fields, we also need to take them into account.
                 .Where(x => projectableProperties.All(y => x.Name != y.Name && x.Name != $"<{y.Name}>k__BackingField"));
@@ -364,7 +363,7 @@ namespace EntityFrameworkCore.Projectables.Services
                 Expression.Lambda(
                     Expression.MemberInit(
                         Expression.New(entityType.ClrType),
-                        properties.Select(x => Expression.Bind(x, Expression.MakeMemberAccess(xParam, x)))
+                        members.Select(x => _MakeBinding(xParam, x))
                             .Concat(projectableProperties
                                 .Select(x => Expression.Bind(x, _GetAccessor(x, xParam)))
                             )
@@ -372,6 +371,59 @@ namespace EntityFrameworkCore.Projectables.Services
                     xParam
                 )
             );
+        }
+
+        // Builds the member binding used to copy an EF-mapped member into the re-projected entity.
+        //
+        // EF's member metadata resolves auto-properties to their compiler-generated backing field.
+        // Reading a mapped scalar or navigation through that backing field prevents EF's navigation
+        // expansion from recognizing it as a plain column/navigation, so it instead materializes the
+        // whole source entity — including any Include-ed collection navigations — once for every
+        // rewritten member. That produces one duplicate JOIN per member (see issue #217).
+        //
+        // Reading through the CLR property lets EF treat scalars as columns and collapse a collection
+        // navigation into a single join. When the property is also settable we bind to the property
+        // itself so the generated projection keeps the natural member/column names instead of the
+        // backing-field name.
+        private static MemberAssignment _MakeBinding(ParameterExpression para, MemberInfo member)
+        {
+            var property = _ResolveClrProperty(member);
+            if (property is not null && property.CanRead)
+            {
+                var read = Expression.MakeMemberAccess(para, property);
+                return property.CanWrite
+                    ? Expression.Bind(property, read)
+                    : Expression.Bind(member, read);
+            }
+
+            return Expression.Bind(member, Expression.MakeMemberAccess(para, member));
+        }
+
+        // Resolves the CLR property backing an EF member, whether EF handed us the property directly
+        // or the compiler-generated "<Name>k__BackingField" for an auto-property.
+        private static PropertyInfo? _ResolveClrProperty(MemberInfo member)
+        {
+            switch (member)
+            {
+                case PropertyInfo property:
+                    return property;
+                case FieldInfo { Name: ['<', ..] } field when field.DeclaringType is { } declaringType:
+                    var closingBracket = field.Name.IndexOf('>');
+                    if (closingBracket > 1)
+                    {
+                        var propertyName = field.Name.Substring(1, closingBracket - 1);
+                        var property = declaringType.GetProperty(propertyName,
+                            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                        if (property is not null && property.PropertyType == field.FieldType)
+                        {
+                            return property;
+                        }
+                    }
+
+                    return null;
+                default:
+                    return null;
+            }
         }
 
         private Expression _GetAccessor(PropertyInfo property, ParameterExpression para)
