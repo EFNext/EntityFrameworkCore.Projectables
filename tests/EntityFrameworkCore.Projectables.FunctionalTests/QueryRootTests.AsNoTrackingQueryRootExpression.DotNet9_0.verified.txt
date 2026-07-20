@@ -1,2 +1,2 @@
-﻿SELECT [e].[Id], [e].[Id] * 5
+﻿SELECT [e].[Id], [e].[Id] * 5 AS [ComputedWithBacking]
 FROM [Entity] AS [e]
