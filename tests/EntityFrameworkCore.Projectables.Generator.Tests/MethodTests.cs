@@ -392,6 +392,72 @@ namespace Foo {
     }
 
     [Fact]
+    public void LongParameterMethod_HintNameIsBounded()
+    {
+        // A deeply-qualified nested generic parameter makes the generated class name — and, historically,
+        // the file name — exceed ~150 characters, which overflows path limits and crashes Visual Studio
+        // when browsing generated files. The hint name must be shortened well below that.
+        var compilation = CreateCompilation(@"
+using System.Collections.Generic;
+using EntityFrameworkCore.Projectables;
+namespace Some.Deep.Namespace.For.The.Test {
+    class Alpha {}
+    class Beta {}
+    class Container {
+        [Projectable]
+        public int Combine(Dictionary<Alpha, List<Beta>> values) => values.Count;
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        var hintName = result.GeneratedTrees[0].FilePath.Split('/', '\\')[^1];
+
+        // Bounded length (readable head + deterministic hash + ".g.cs") while staying recognizable via its
+        // namespace/member head. The un-shortened base name here is well over 150 characters.
+        Assert.EndsWith(".g.cs", hintName);
+        Assert.True(hintName.Length <= 69, $"Hint name too long ({hintName.Length}): {hintName}");
+        Assert.StartsWith("Some_Deep_", hintName);
+    }
+
+    [Fact]
+    public void LongOverloads_HintNamesAreUnique()
+    {
+        // Two overloads share the same class/member (identical readable prefix) but differ only in their
+        // long parameter types. The appended hash must keep the two hint names distinct, otherwise Roslyn
+        // rejects the duplicate hint name.
+        var compilation = CreateCompilation(@"
+using System.Collections.Generic;
+using EntityFrameworkCore.Projectables;
+namespace Foo {
+    class C {
+        [Projectable]
+        public int Combine(Dictionary<string, List<int>> values) => values.Count;
+
+        [Projectable]
+        public int Combine(Dictionary<string, List<long>> values) => values.Count;
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        // Two trees (rather than a thrown duplicate-hint-name error) confirms the names disambiguated.
+        Assert.Equal(2, result.GeneratedTrees.Length);
+
+        var hintNames = result.GeneratedTrees.Select(t => t.FilePath.Split('/', '\\')[^1]).ToList();
+
+        Assert.Equal(2, hintNames.Distinct().Count());
+        Assert.All(hintNames, h => Assert.True(h.Length <= 69, $"Hint name too long ({h.Length}): {h}"));
+        Assert.All(hintNames, h => Assert.StartsWith("Foo_C_Combine_", h));
+    }
+
+    [Fact]
     public Task InheritedMembers()
     {
         var compilation = CreateCompilation(@"
