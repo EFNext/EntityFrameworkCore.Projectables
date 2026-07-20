@@ -229,7 +229,17 @@ public class ProjectionExpressionGenerator : IIncrementalGenerator
         }
 
         var generatedClassName = ProjectionExpressionClassNameGenerator.GenerateName(projectable.ClassNamespace, projectable.NestedInClassNames, projectable.MemberName, projectable.ParameterTypeNames);
-        var generatedFileName = projectable.ClassTypeParameterList is not null ? $"{generatedClassName}-{projectable.ClassTypeParameterList.ChildNodes().Count()}.g.cs" : $"{generatedClassName}.g.cs";
+
+        // The generated class name embeds every parameter's fully-qualified type name and can grow to
+        // hundreds of characters. Using it verbatim as the file name overflows path limits (e.g. Windows
+        // MAX_PATH) and crashes Visual Studio when browsing generated files. The file (hint) name is never
+        // read at runtime, so it is shortened independently of the class name — which is a runtime contract
+        // (line below and the resolver/registry) and must stay unchanged. See GeneratedHintName.
+        var generatedFileBaseName = projectable.ClassTypeParameterList is not null
+            ? $"{generatedClassName}-{projectable.ClassTypeParameterList.ChildNodes().Count()}"
+            : generatedClassName;
+        var readableFileNamePrefix = ProjectionExpressionClassNameGenerator.GenerateName(projectable.ClassNamespace, projectable.NestedInClassNames, projectable.MemberName);
+        var generatedFileName = GeneratedHintName.Build(generatedFileBaseName, readableFileNamePrefix);
 
         var classSyntax = ClassDeclaration(generatedClassName)
             .WithModifiers(TokenList(Token(SyntaxKind.StaticKeyword)))
