@@ -47,7 +47,7 @@ static internal class Diagnostics
     public readonly static DiagnosticDescriptor RequiresBodyDefinition = new DiagnosticDescriptor(
         id: "EFP0006",
         title: "Method or property should expose a body definition",
-        messageFormat: "Method or property '{0}' should expose a body definition (e.g. an expression-bodied member or a block-bodied method) to be used as the source for the generated expression tree.",
+        messageFormat: "Method or property '{0}' should expose a body definition (e.g. an expression-bodied member or a block-bodied method) to be used as the source for the generated expression tree. If the member is abstract you can use the InlineHierarchy property on the Projectable attribute to allow an empty body which will be replaced by the derived classes' implementations.",
         category: "Design",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);

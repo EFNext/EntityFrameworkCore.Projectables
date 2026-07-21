@@ -63,6 +63,7 @@ There are two components: a **Roslyn source generator** that emits companion `Ex
 | `UseMemberBody`                                 | [Reference →](https://efnext.github.io/reference/use-member-body)          |
 | Roslyn analyzers & code fixes (EFP0001–EFP0012) | [Reference →](https://efnext.github.io/reference/diagnostics)              |
 | Limited/Full compatibility mode                 | [Reference →](https://efnext.github.io/reference/compatibility-mode)       |
+| Polymorphic dispatch (hierarchies)              | [Advanced →](https://efnext.github.io/advanced/polymorphic-dispatch)       |
 
 ## FAQ
 

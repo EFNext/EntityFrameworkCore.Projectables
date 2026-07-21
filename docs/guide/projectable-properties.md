@@ -121,6 +121,24 @@ public string Category
 
 See [Block-Bodied Members](/advanced/block-bodied-members) for the full feature documentation.
 
+## Polymorphic Dispatch (Hierarchies)
+
+```csharp
+public class Foo{
+	[Projectable(PolymorphicDispatch = true)]
+	public virtual string Name => "Foo";
+	// Converted to: @this is Bar ? "Bar" : "Foo"
+}
+
+public class Bar : Foo{
+	[Projectable(PolymorphicDispatch = true)]
+	public override string Name => "Bar";
+	// Converted to: "Bar" as it has no derived types
+}
+```
+
+See [Polymorphic Dispatch](/advanced/polymorphic-dispatch) for full details.
+
 ## Important Rules
 
 - The property **must be expression-bodied** (using `=>`) unless `AllowBlockBody = true` is set.

@@ -497,4 +497,27 @@ namespace Foo {
 
         return Verifier.Verify(result.GeneratedTrees[0].ToString());
     }
+
+    [Fact]
+    public void AbstractWithPolymorphicDispatch()
+    {
+        var compilation = CreateCompilation(@"
+using System;
+using System.Linq;
+using System.Collections.Generic;
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    public abstract class Foo {
+        [Projectable(PolymorphicDispatch = true)]
+        public abstract int Id { get; }
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Empty(result.GeneratedTrees);
+    }
 }

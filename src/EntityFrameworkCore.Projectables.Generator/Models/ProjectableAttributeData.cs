@@ -13,6 +13,7 @@ readonly internal record struct ProjectableAttributeData
     public string? UseMemberBody { get; }
     public bool? ExpandEnumMethods { get; }
     public bool? AllowBlockBody { get; }
+    public bool? PolymorphicDispatch { get; }
 
     public ProjectableAttributeData(AttributeData attribute)
     {
@@ -20,6 +21,7 @@ readonly internal record struct ProjectableAttributeData
         string? useMemberBody = null;
         bool? expandEnumMethods = null;
         bool? allowBlockBody = null;
+        bool? polymorphicDispatch = null;
 
         foreach (var namedArgument in attribute.NamedArguments)
         {
@@ -53,6 +55,12 @@ readonly internal record struct ProjectableAttributeData
                         allowBlockBody = allow;
                     }
                     break;
+                case nameof(PolymorphicDispatch):
+                    if (value.Value is bool dispatch)
+                    {
+                        polymorphicDispatch = dispatch;
+                    }
+                    break;
             }
         }
 
@@ -60,5 +68,6 @@ readonly internal record struct ProjectableAttributeData
         UseMemberBody = useMemberBody;
         ExpandEnumMethods = expandEnumMethods;
         AllowBlockBody = allowBlockBody;
+        PolymorphicDispatch = polymorphicDispatch;
     }
 }

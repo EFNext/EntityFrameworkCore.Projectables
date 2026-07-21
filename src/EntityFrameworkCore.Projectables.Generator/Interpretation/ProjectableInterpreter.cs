@@ -25,6 +25,8 @@ static internal partial class ProjectableInterpreter
             projectableAttribute.ExpandEnumMethods ?? globalOptions.ExpandEnumMethods ?? false;
         var allowBlockBody =
             projectableAttribute.AllowBlockBody ?? globalOptions.AllowBlockBody ?? false;
+        var polymorphicDispatch =
+            projectableAttribute.PolymorphicDispatch ?? globalOptions.PolymorphicDispatch ?? false;
 
         // 1. Resolve the member body (handles UseMemberBody redirection)
         var memberBody = TryResolveMemberBody(member, memberSymbol, useMemberBody, context);
@@ -75,25 +77,25 @@ static internal partial class ProjectableInterpreter
         {
             // Projectable method
             (_, MethodDeclarationSyntax methodDecl) =>
-                TryApplyMethodBody(methodDecl, allowBlockBody, memberSymbol,
+                TryApplyMethodBody(methodDecl, allowBlockBody, polymorphicDispatch, memberSymbol,
                     expressionSyntaxRewriter, declarationSyntaxRewriter, context, descriptor),
 
             // Projectable method whose body is an Expression<TDelegate> property
             (MethodDeclarationSyntax originalMethodDecl, PropertyDeclarationSyntax exprPropDecl) =>
                 TryApplyExpressionPropertyBody(originalMethodDecl, exprPropDecl,
-                    semanticModel, member, memberSymbol,
+                    semanticModel, polymorphicDispatch, member, memberSymbol,
                     expressionSyntaxRewriter, declarationSyntaxRewriter, context, descriptor),
 
             // Projectable property whose body is an Expression<TDelegate> property
             (PropertyDeclarationSyntax originalPropertyDecl, PropertyDeclarationSyntax exprPropDecl)
                 when IsExpressionDelegatePropertyDecl(exprPropDecl, semanticModel) =>
                 TryApplyExpressionPropertyBodyForProperty(originalPropertyDecl, exprPropDecl,
-                    semanticModel, member, memberSymbol,
+                    semanticModel, polymorphicDispatch, member, memberSymbol,
                     expressionSyntaxRewriter, declarationSyntaxRewriter, context, descriptor),
 
             // Projectable property
             (_, PropertyDeclarationSyntax propDecl) =>
-                TryApplyPropertyBody(propDecl, allowBlockBody, memberSymbol,
+                TryApplyPropertyBody(propDecl, allowBlockBody, polymorphicDispatch, memberSymbol,
                     expressionSyntaxRewriter, declarationSyntaxRewriter, context, descriptor),
 
             // Projectable constructor

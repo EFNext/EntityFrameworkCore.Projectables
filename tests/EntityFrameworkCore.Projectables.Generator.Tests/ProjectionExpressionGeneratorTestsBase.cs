@@ -43,11 +43,12 @@ public abstract class ProjectionExpressionGeneratorTestsBase
         /// </summary>
         public ImmutableArray<SyntaxTree> GeneratedTrees =>
             _inner.GeneratedTrees
-                .Where(t => !t.FilePath.EndsWith("ProjectionRegistry.g.cs", StringComparison.Ordinal))
+                .Where(t => !t.FilePath.EndsWith("ProjectionRegistry.g.cs", StringComparison.Ordinal) &&
+                    !t.FilePath.EndsWith("ProjectableGlobalOptions.g.cs", StringComparison.Ordinal))
                 .ToImmutableArray();
 
         /// <summary>
-        /// All generated trees including <c>ProjectionRegistry.g.cs</c>.
+        /// All generated trees including <c>ProjectionRegistry.g.cs</c> and <c>ProjectableGlobalOptions.g.cs</c>.
         /// Use this in new tests that need to verify the registry.
         /// </summary>
         public ImmutableArray<SyntaxTree> AllGeneratedTrees => _inner.GeneratedTrees;
@@ -57,6 +58,12 @@ public abstract class ProjectionExpressionGeneratorTestsBase
         /// </summary>
         public SyntaxTree? RegistryTree =>
             _inner.GeneratedTrees.FirstOrDefault(t => t.FilePath.EndsWith("ProjectionRegistry.g.cs", StringComparison.Ordinal));
+
+        /// <summary>
+        /// The generated <c>ProjectableGlobalOptions.g.cs</c> tree, or <c>null</c> if it was not generated.
+        /// </summary>
+        public SyntaxTree? GlobalOptionsTree =>
+            _inner.GeneratedTrees.FirstOrDefault(t => t.FilePath.EndsWith("ProjectableGlobalOptions.g.cs", StringComparison.Ordinal));
     }
 
     protected IReadOnlyList<MetadataReference> GetDefaultReferences()

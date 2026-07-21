@@ -10,7 +10,7 @@ namespace EntityFrameworkCore.Projectables.Generated
     {
         static global::System.Linq.Expressions.Expression<global::System.Func<global::Projectables.Repro.Derived, string>> Expression()
         {
-            return (global::Projectables.Repro.Derived @this) => @this.Foo();
+            return (global::Projectables.Repro.Derived @this) => ((global::Projectables.Repro.Base)@this).Foo();
         }
     }
 }
