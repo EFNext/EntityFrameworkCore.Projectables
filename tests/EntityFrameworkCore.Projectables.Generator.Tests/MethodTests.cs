@@ -799,4 +799,115 @@ namespace One.Two {
 
         return Verifier.Verify(result.GeneratedTrees[0].ToString());
     }
+
+    [Fact]
+    public Task ImplicitNewExpression_SimpleObjectInitializer_RewritesToExplicitType()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    class Source {
+        public string Name { get; set; }
+        public int Value { get; set; }
+    }
+
+    class Dest {
+        public string Name { get; set; }
+        public int Value { get; set; }
+
+        [Projectable]
+        public static Dest From(Source s) => new()
+        {
+            Name = s.Name,
+            Value = s.Value,
+        };
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Single(result.Diagnostics.Where(d => d.Id == "EFP0012")); // factory method hint
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
+
+    [Fact]
+    public Task ImplicitNewExpression_WithTernaryAndNullConditional_RewritesToExplicitType()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    class Inner {
+        public string Code { get; set; }
+    }
+
+    class Source {
+        public string Name { get; set; }
+        public bool IsActive { get; set; }
+        public Inner Detail { get; set; }
+    }
+
+    class Dest {
+        public string Name { get; set; }
+        public string Status { get; set; }
+        public string Code { get; set; }
+
+        [Projectable(NullConditionalRewriteSupport = NullConditionalRewriteSupport.Ignore)]
+        public static Dest From(Source s) => new()
+        {
+            Name = s.Name,
+            Status = s.IsActive ? ""Active"" : ""Inactive"",
+            Code = s.Detail.Code,
+        };
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Single(result.Diagnostics.Where(d => d.Id == "EFP0012")); // factory method hint
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
+
+    [Fact]
+    public Task ImplicitNewExpression_WithConstructorArguments_RewritesToExplicitType()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    class Source {
+        public string Name { get; set; }
+        public int Value { get; set; }
+    }
+
+    class Dest {
+        public string Name { get; }
+        public int Value { get; }
+
+        public Dest(string name, int value)
+        {
+            Name = name;
+            Value = value;
+        }
+
+        [Projectable]
+        public static Dest From(Source s) => new(s.Name, s.Value);
+    }
+}
+");
+
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
 }

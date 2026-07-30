@@ -298,6 +298,37 @@ internal partial class ExpressionSyntaxRewriter : CSharpSyntaxRewriter
         ).WithTriviaFrom(node);
     }
 
+    public override SyntaxNode? VisitImplicitObjectCreationExpression(ImplicitObjectCreationExpressionSyntax node)
+    {
+        // Target-typed new expressions (new() { ... }) are not supported in expression trees.
+        // Resolve the concrete type from the semantic model and rewrite to an explicit new T() { ... }.
+        var typeInfo = _semanticModel.GetTypeInfo(node);
+        if (typeInfo.Type is INamedTypeSymbol namedType)
+        {
+            var typeName = SyntaxFactory.ParseTypeName(
+                namedType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                .WithLeadingTrivia(SyntaxFactory.Space);
+
+            var visitedArgumentList = node.ArgumentList is not null
+                ? (ArgumentListSyntax?)Visit(node.ArgumentList)
+                : SyntaxFactory.ArgumentList();
+
+            var visitedInitializer = node.Initializer is not null
+                ? (InitializerExpressionSyntax?)Visit(node.Initializer)
+                : null;
+
+            return SyntaxFactory.ObjectCreationExpression(
+                node.NewKeyword,
+                typeName,
+                visitedArgumentList ?? SyntaxFactory.ArgumentList(),
+                visitedInitializer
+            ).WithLeadingTrivia(node.GetLeadingTrivia())
+             .WithTrailingTrivia(node.GetTrailingTrivia());
+        }
+
+        return base.VisitImplicitObjectCreationExpression(node);
+    }
+
     public override SyntaxNode? VisitIsPatternExpression(IsPatternExpressionSyntax node)
     {
         // Pattern matching is not supported in expression trees (CS8122).

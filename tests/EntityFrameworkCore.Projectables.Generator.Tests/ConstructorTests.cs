@@ -1339,4 +1339,51 @@ namespace Foo {
 
         return Verifier.Verify(result.GeneratedTrees[0].ToString());
     }
+
+    [Fact]
+    public Task ProjectableConstructor_WithNullConditionalIgnore()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    class Dossier {
+        public string Numero { get; set; }
+    }
+
+    class Source {
+        public string Libelle { get; set; }
+        public Dossier Dossier { get; set; }
+        public decimal TotalHt { get; set; }
+        public bool IsForfait { get; set; }
+        public string Type { get; set; }
+    }
+
+    class Projection {
+        public string Libelle { get; set; }
+        public string NumeroDossier { get; set; }
+        public decimal TotalHt { get; set; }
+        public string TypeValue { get; set; }
+        public string IsForfaitDisplay { get; set; }
+
+        public Projection() { }
+
+        [Projectable(NullConditionalRewriteSupport = NullConditionalRewriteSupport.Ignore)]
+        public Projection(Source source) {
+            Libelle = source.Libelle;
+            NumeroDossier = source.Dossier?.Numero;
+            TotalHt = source.TotalHt;
+            TypeValue = source.Type?.ToString();
+            IsForfaitDisplay = source.IsForfait ? ""Yes"" : ""No"";
+        }
+    }
+}
+");
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
 }
