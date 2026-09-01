@@ -337,6 +337,11 @@ internal class ConstructorBodyConverter
             => _map.TryGetValue(node.Identifier.Text, out var replacement)
                 ? replacement.WithTriviaFrom(node)
                 : base.VisitIdentifierName(node);
+
+        // A member access's Name (e.g. the "Name" in "category.Name") is a member selector,
+        // not a standalone parameter reference, and must never be substituted.
+        public override SyntaxNode? VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
+            => node.WithExpression((ExpressionSyntax)Visit(node.Expression)!);
     }
 
     /// <summary>
@@ -355,6 +360,11 @@ internal class ConstructorBodyConverter
             => _locals.TryGetValue(node.Identifier.Text, out var replacement)
                 ? SyntaxFactory.ParenthesizedExpression(replacement.WithoutTrivia()).WithTriviaFrom(node)
                 : base.VisitIdentifierName(node);
+
+        // A member access's Name (e.g. the "Name" in "category.Name") is a member selector,
+        // not a standalone local-variable reference, and must never be substituted.
+        public override SyntaxNode? VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
+            => node.WithExpression((ExpressionSyntax)Visit(node.Expression)!);
     }
 
     /// <summary>
@@ -394,7 +404,10 @@ internal class ConstructorBodyConverter
                     .WithTriviaFrom(node);
             }
 
-            return base.VisitMemberAccessExpression(node);
+            // The Name of a member access (e.g. the "Name" in "category.Name") is a member
+            // selector, not a standalone property reference, and must never be substituted.
+            // Only the target expression can legitimately contain a property reference.
+            return node.WithExpression((ExpressionSyntax)Visit(node.Expression)!);
         }
 
         // Catches bare PropName → inline accumulated expression (delegated ctor case).

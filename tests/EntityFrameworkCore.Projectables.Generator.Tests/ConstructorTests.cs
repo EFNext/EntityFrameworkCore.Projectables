@@ -372,6 +372,46 @@ namespace Foo {
     }
 
     [Fact]
+    public Task ProjectableConstructor_MemberAccessNameCollidesWithAssignedPropertyName()
+    {
+        // Regression test for https://github.com/EFNext/EntityFrameworkCore.Projectables/issues/220
+        // The "Name" identifier assigned to InventoryEntry.Name must not be substituted into
+        // the ".Name" selector of "category.Name" for an unrelated assignment.
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+
+namespace Foo {
+    class InventoryEntry {
+        public string Name { get; set; }
+        public string CategoryName { get; set; }
+
+        public InventoryEntry() { }
+
+        [Projectable]
+        public InventoryEntry(Item item, ItemCategory category) {
+            Name = item.Name;
+            CategoryName = category.Name;
+        }
+    }
+
+    class ItemCategory {
+        public string Name { get; set; }
+    }
+
+    class Item {
+        public string Name { get; set; }
+    }
+}
+");
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Single(result.GeneratedTrees);
+
+        return Verifier.Verify(result.GeneratedTrees[0].ToString());
+    }
+
+    [Fact]
     public Task ProjectableConstructor_ReferencingBasePropertyInDerivedBody()
     {
         var compilation = CreateCompilation(@"
