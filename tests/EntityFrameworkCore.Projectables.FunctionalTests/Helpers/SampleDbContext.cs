@@ -15,11 +15,13 @@ namespace EntityFrameworkCore.Projectables.FunctionalTests.Helpers
     {
         readonly CompatibilityMode _compatibilityMode;
         readonly QueryTrackingBehavior _queryTrackingBehavior;
+        readonly bool _populateSettableProperties;
 
-        public SampleDbContext(CompatibilityMode compatibilityMode = CompatibilityMode.Full, QueryTrackingBehavior queryTrackingBehavior = QueryTrackingBehavior.TrackAll)
+        public SampleDbContext(CompatibilityMode compatibilityMode = CompatibilityMode.Full, QueryTrackingBehavior queryTrackingBehavior = QueryTrackingBehavior.TrackAll, bool populateSettableProperties = true)
         {
             _compatibilityMode = compatibilityMode;
             _queryTrackingBehavior = queryTrackingBehavior;
+            _populateSettableProperties = populateSettableProperties;
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -27,6 +29,7 @@ namespace EntityFrameworkCore.Projectables.FunctionalTests.Helpers
             optionsBuilder.UseSqlServer("Server=(localdb)\\v11.0;Integrated Security=true"); // Fake connection string as we're actually never connecting
             optionsBuilder.UseProjectables(options => {
                 options.CompatibilityMode(_compatibilityMode); // Needed by our ComplexModelTests
+                options.PopulateSettableProperties(_populateSettableProperties);
             });
             optionsBuilder.UseQueryTrackingBehavior(_queryTrackingBehavior);
         }
