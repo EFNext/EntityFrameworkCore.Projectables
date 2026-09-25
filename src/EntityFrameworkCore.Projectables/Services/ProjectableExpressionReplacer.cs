@@ -331,20 +331,10 @@ namespace EntityFrameworkCore.Projectables.Services
 
         private Expression _AddProjectableSelect(Expression node, IEntityType entityType)
         {
-            // This rewrite appends Select<TEntity, TEntity>, so it only composes when the
-            // node really is a sequence of TEntity. It is not, whenever the caller already
-            // projected away from the entity root -- `.Select(x => new Dto { ... })`, or a
-            // projection to an anonymous type. There is no entity left to populate in that
-            // case, and appending the rewrite is a type error rather than a no-op:
-            //
-            //   ArgumentException: Expression of type 'IQueryable<Dto>' cannot be used for
-            //   parameter of type 'IQueryable<TEntity>' of method Select[TEntity,TEntity]
-            //
-            // _disableRootRewrite is meant to catch this: a `Select` sets it. But #132 gave
-            // that same field a second job, the tracking decision, and an `AsNoTracking()`
-            // written before the `Select` clears it again -- ExpressionVisitor walks
-            // outside-in, so the `AsNoTracking` node nearest the query root is visited last
-            // and wins. Checking the node's own type is independent of visit order.
+		    // This appends Select<TEntity, TEntity>, so it only composes when the node
+		    // really is a sequence of TEntity not a DTO or anonymous type.  Fixes this error
+		    //   ArgumentException: Expression of type 'IQueryable<Dto>' cannot be used for
+		    //   parameter of type 'IQueryable<TEntity>' of method Select[TEntity,TEntity]
             if (!_IsSequenceOfEntity(node.Type, entityType.ClrType))
             {
                 return node;
