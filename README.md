@@ -8,7 +8,8 @@ Flexible projection magic for EF Core
 - EntityFrameworkCore.Projectables.Abstractions [![NuGet version](https://img.shields.io/nuget/v/EntityFrameworkCore.Projectables.Abstractions.svg?style=flat-square)](https://www.nuget.org/packages/EntityFrameworkCore.Projectables.Abstractions/) [![NuGet](https://img.shields.io/nuget/dt/EntityFrameworkCore.Projectables.Abstractions.svg?style=flat-square)](https://www.nuget.org/packages/EntityFrameworkCore.Projectables.Abstractions/)
 - EntityFrameworkCore.Projectables [![NuGet version](https://img.shields.io/nuget/v/EntityFrameworkCore.Projectables.svg?style=flat-square)](https://www.nuget.org/packages/EntityFrameworkCore.Projectables/) [![NuGet](https://img.shields.io/nuget/dt/EntityFrameworkCore.Projectables.svg?style=flat-square)](https://www.nuget.org/packages/EntityFrameworkCore.Projectables/)
 
-> Starting with V2 of this project we're binding against **EF Core 6**. If you're targeting **EF Core 5** or **EF Core 3.1** then you can use the latest v1 release. These are functionally equivalent.
+> [!TIP]
+> Looking for modern C# in your queries? Check out **[ExpressiveSharp](https://github.com/EFNext/ExpressiveSharp)**, the successor to Projectables ([migration guide](https://efnext.github.io/ExpressiveSharp/guide/migration-from-projectables)).
 
 ## Getting started
 1. Install the package from [NuGet](https://www.nuget.org/packages/EntityFrameworkCore.Projectables/)
