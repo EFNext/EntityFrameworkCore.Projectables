@@ -19,6 +19,7 @@ namespace EntityFrameworkCore.Projectables.Infrastructure.Internal
     public class ProjectionOptionsExtension : IDbContextOptionsExtension
     {
         CompatibilityMode _compatibilityMode = CompatibilityMode.Full;
+        bool _populateSettableProperties = true;
 
         public ProjectionOptionsExtension()
         {
@@ -91,6 +92,21 @@ namespace EntityFrameworkCore.Projectables.Infrastructure.Internal
             }
         }
 
+        /// <summary>
+        /// Whether projectable properties that have a setter are filled in with their
+        /// database-computed value when a query loads whole entities. Enabled by default.
+        /// </summary>
+        public bool PopulateSettableProperties => _populateSettableProperties;
+
+        public ProjectionOptionsExtension WithPopulateSettableProperties(bool enabled)
+        {
+            var clone = Clone();
+
+            clone._populateSettableProperties = enabled;
+
+            return clone;
+        }
+
         public ProjectionOptionsExtension WithCompatibilityMode(CompatibilityMode compatibilityMode)
         {
             var clone = Clone();
@@ -126,6 +142,7 @@ namespace EntityFrameworkCore.Projectables.Infrastructure.Internal
                 }
 
                 debugInfo["Projectables:CompatibilityMode"] = Extension._compatibilityMode.ToString();
+                debugInfo["Projectables:PopulateSettableProperties"] = Extension._populateSettableProperties.ToString();
             }
 
             public override int GetServiceProviderHashCode()
@@ -133,6 +150,7 @@ namespace EntityFrameworkCore.Projectables.Infrastructure.Internal
                 var hashCode = new HashCode();
 
                 hashCode.Add(Extension._compatibilityMode);
+                hashCode.Add(Extension._populateSettableProperties);
 
                 return hashCode.ToHashCode();
             }

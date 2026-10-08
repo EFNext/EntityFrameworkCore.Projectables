@@ -61,7 +61,9 @@ namespace EntityFrameworkCore.Projectables.Infrastructure.Internal
             var trackingByDefault = (contextOptions.FindExtension<CoreOptionsExtension>()?.QueryTrackingBehavior ?? QueryTrackingBehavior.TrackAll) ==
                                     QueryTrackingBehavior.TrackAll;
 
-            _projectableExpressionReplacer = new ProjectableExpressionReplacer(new ProjectionExpressionResolver(), trackingByDefault);
+            var populateSettableProperties = contextOptions.FindExtension<ProjectionOptionsExtension>()?.PopulateSettableProperties ?? true;
+
+            _projectableExpressionReplacer = new ProjectableExpressionReplacer(new ProjectionExpressionResolver(), trackingByDefault, populateSettableProperties);
         }
 
         public override Func<QueryContext, TResult> CreateCompiledAsyncQuery<TResult>(Expression query)

@@ -19,6 +19,7 @@ namespace EntityFrameworkCore.Projectables.Services
         private IQueryProvider? _currentQueryProvider;
         private bool _disableRootRewrite = false;
         private readonly bool _trackingByDefault;
+        private readonly bool _populateSettableProperties;
         private IEntityType? _entityType;
 
         // Extract MethodInfo via expression trees (trim-safe; computed once per AppDomain)
@@ -38,9 +39,10 @@ namespace EntityFrameworkCore.Projectables.Services
         private readonly static ConditionalWeakTable<Type, MethodInfo> _closedSelectCache = new();
         private readonly static ConditionalWeakTable<Type, MethodInfo> _closedWhereCache = new();
 
-        public ProjectableExpressionReplacer(IProjectionExpressionResolver projectionExpressionResolver, bool trackByDefault = false)
+        public ProjectableExpressionReplacer(IProjectionExpressionResolver projectionExpressionResolver, bool trackByDefault = false, bool populateSettableProperties = true)
         {
             _trackingByDefault = trackByDefault;
+            _populateSettableProperties = populateSettableProperties;
             _resolver = projectionExpressionResolver;
         }
 
@@ -68,6 +70,14 @@ namespace EntityFrameworkCore.Projectables.Services
             _entityType = null;
 
             var ret = Visit(node);
+
+            if (!_populateSettableProperties)
+            {
+                // Opted out via UseProjectables(o => o.PopulateSettableProperties(false)).
+                // Projectables are still expanded wherever a query reads them; they are just
+                // not assigned onto materialized entities.
+                return ret;
+            }
 
             if (_disableRootRewrite)
             {

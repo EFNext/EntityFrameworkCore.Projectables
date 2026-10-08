@@ -76,5 +76,33 @@ namespace EntityFrameworkCore.Projectables.FunctionalTests
 
             return Verifier.Verify(query.ToQueryString());
         }
+
+        // PopulateSettableProperties(false) skips the query root rewrite entirely, so a
+        // materialized entity keeps whatever its CLR member returns. Projectables are still
+        // expanded wherever a query reads them; see
+        // PopulateSettablePropertiesDisabledStillExpandsInProjection below.
+        [Fact]
+        public Task PopulateSettablePropertiesDisabledQueryRootExpression()
+        {
+            using var dbContext = new SampleDbContext<Entity>(
+                queryTrackingBehavior: QueryTrackingBehavior.NoTracking,
+                populateSettableProperties: false);
+
+            var query = dbContext.Set<Entity>();
+
+            return Verifier.Verify(query.ToQueryString());
+        }
+
+        [Fact]
+        public Task PopulateSettablePropertiesDisabledStillExpandsInProjection()
+        {
+            using var dbContext = new SampleDbContext<Entity>(
+                queryTrackingBehavior: QueryTrackingBehavior.NoTracking,
+                populateSettableProperties: false);
+
+            var query = dbContext.Set<Entity>().Select(e => new { e.ComputedWithBacking });
+
+            return Verifier.Verify(query.ToQueryString());
+        }
     }
 }

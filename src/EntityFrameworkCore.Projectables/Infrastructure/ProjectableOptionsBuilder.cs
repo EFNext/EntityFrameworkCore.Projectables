@@ -25,6 +25,20 @@ namespace EntityFrameworkCore.Projectables.Infrastructure
             => WithOption(x => x.WithCompatibilityMode(mode));
 
         /// <summary>
+        /// Controls whether projectable properties that have a setter are filled in with their
+        /// database-computed value when a query loads whole entities (issue #84). Enabled by
+        /// default.
+        /// <para>
+        /// Disabling it leaves projectables usable inside queries -- in Select, Where,
+        /// OrderBy and so on -- while a loaded entity keeps whatever its CLR member
+        /// returns. That is the behaviour of versions from before #84, and is what you want
+        /// when entities are only ever projected explicitly.
+        /// </para>
+        /// </summary>
+        public ProjectableOptionsBuilder PopulateSettableProperties(bool enabled)
+            => WithOption(x => x.WithPopulateSettableProperties(enabled));
+
+        /// <summary>
         ///     Sets an option by cloning the extension used to store the settings. This ensures the builder
         ///     does not modify options that are already in use elsewhere.
         /// </summary>
