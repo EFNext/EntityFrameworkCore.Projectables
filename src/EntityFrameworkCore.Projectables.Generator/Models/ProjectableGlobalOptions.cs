@@ -12,6 +12,7 @@ readonly internal record struct ProjectableGlobalOptions
     public NullConditionalRewriteSupport? NullConditionalRewriteSupport { get; }
     public bool? ExpandEnumMethods { get; }
     public bool? AllowBlockBody { get; }
+    public bool? PolymorphicDispatch { get; }
 
     public ProjectableGlobalOptions(AnalyzerConfigOptions globalOptions)
     {
@@ -32,6 +33,12 @@ readonly internal record struct ProjectableGlobalOptions
             && bool.TryParse(allowStr, out var allow))
         {
             AllowBlockBody = allow;
+        }
+
+        if (globalOptions.TryGetValue("build_property.Projectables_PolymorphicDispatch", out var dispatchStr)
+            && bool.TryParse(dispatchStr, out var dispatch))
+        {
+            PolymorphicDispatch = dispatch;
         }
     }
 }

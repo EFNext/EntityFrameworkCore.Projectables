@@ -47,5 +47,10 @@
         /// Set this to true to suppress the experimental feature warning.
         /// </remarks>
         public bool AllowBlockBody { get; set; }
+
+        /// <summary>
+        /// Get or set whether to inline derived types overrides of the member.
+        /// </summary>
+        public bool PolymorphicDispatch { get; set; }
     }
 }

@@ -236,6 +236,89 @@ namespace Foo {
     }
 
     // -------------------------------------------------------------------------
+    // PolymorphicDispatch
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public Task GlobalPolymorphicDispatch_None_NullValue()
+    {
+        var compilation = CreateCompilation(@"class C { }");
+        var result = RunGenerator(compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Empty(result.GeneratedTrees);
+        Assert.NotNull(result.GlobalOptionsTree);
+
+        return Verifier.Verify(result.GlobalOptionsTree.ToString());
+    }
+
+    [Fact]
+    public Task GlobalPolymorphicDispatch_True_EnablesEmptyBodyWithoutAttributeFlag()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+namespace Foo {
+    abstract class C {
+        [Projectable]
+        public abstract int GetDouble();
+    }
+}
+");
+        var result = RunGenerator(compilation, new Dictionary<string, string> {
+            ["build_property.Projectables_PolymorphicDispatch"] = "true"
+        });
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Empty(result.GeneratedTrees);
+        Assert.NotNull(result.GlobalOptionsTree);
+
+        return Verifier.Verify(result.GlobalOptionsTree.ToString());
+    }
+
+    [Fact]
+    public Task PolymorphicDispatch_True_OverridesGlobalFalse()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+namespace Foo {
+    abstract class C {
+        [Projectable(PolymorphicDispatch = true)]
+        public abstract int GetDouble();
+    }
+}
+");
+        var result = RunGenerator(compilation, new Dictionary<string, string> {
+            ["build_property.Projectables_PolymorphicDispatch"] = "false"
+        });
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Empty(result.GeneratedTrees);
+        Assert.NotNull(result.GlobalOptionsTree);
+
+        return Verifier.Verify(result.GlobalOptionsTree.ToString());
+    }
+
+    [Fact]
+    public void PolymorphicDispatch_False_OverridesGlobalTrue()
+    {
+        var compilation = CreateCompilation(@"
+using EntityFrameworkCore.Projectables;
+namespace Foo {
+    abstract class C {
+        [Projectable(PolymorphicDispatch = false)]
+        public abstract int GetDouble();
+    }
+}
+");
+        var result = RunGenerator(compilation, new Dictionary<string, string> {
+            ["build_property.Projectables_PolymorphicDispatch"] = "true"
+        });
+
+        Assert.NotEmpty(result.Diagnostics);
+        Assert.Empty(result.GeneratedTrees);
+    }
+
+    // -------------------------------------------------------------------------
     // No global option set — hard-coded defaults apply (regression guard)
     // -------------------------------------------------------------------------
 

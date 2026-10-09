@@ -107,6 +107,31 @@ See [Block-Bodied Members](/advanced/block-bodied-members) for full details.
 
 ---
 
+### `PolymorphicDispatch`
+
+**Type:** `bool`  
+**Default:** `false`
+
+Enables **polymorphic dispatch** support for abstract/virtual/overwritten members.
+
+```csharp
+public class Foo{
+	[Projectable(PolymorphicDispatch = true)]
+	public virtual string Name() => "Foo";
+	// Converted to: @this is Bar ? "Bar" : "Foo"
+}
+
+public class Bar : Foo{
+	[Projectable(PolymorphicDispatch = true)]
+	public override string Name() => "Bar";
+	// Converted to: "Bar" as it has no derived types
+}
+```
+
+See [Polymorphic Dispatch](/advanced/polymorphic-dispatch) for full details.
+
+---
+
 ## Complete Example
 
 ```csharp
@@ -144,6 +169,17 @@ public class Order
             return "Normal";
         }
     }
+
+	// Polymorphic Dispatch
+	[Projectable(PolymorphicDispatch = true)]
+	public virtual string Currency() => "EUR";
+	// Converted to: @this is Preorder ? "USD" : "EUR"
+}
+
+public class Preorder : Order{
+	[Projectable(PolymorphicDispatch = true)]
+	public override string Currency() => "USD";
+	// Converted to: "USD" as it has no derived types
 }
 ```
 

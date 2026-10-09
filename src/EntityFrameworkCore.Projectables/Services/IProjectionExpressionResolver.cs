@@ -5,6 +5,6 @@ namespace EntityFrameworkCore.Projectables.Services;
 
 public interface IProjectionExpressionResolver
 {
-    LambdaExpression FindGeneratedExpression(MemberInfo projectableMemberInfo,
+    LambdaExpression? FindGeneratedExpression(MemberInfo projectableMemberInfo,
         ProjectableAttribute? projectableAttribute = null);
 }

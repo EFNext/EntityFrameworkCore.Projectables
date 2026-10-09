@@ -1,8 +1,4 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.CodeAnalysis;
-using VerifyXunit;
-using Xunit;
+﻿using Microsoft.CodeAnalysis;
 
 namespace EntityFrameworkCore.Projectables.Generator.Tests;
 
