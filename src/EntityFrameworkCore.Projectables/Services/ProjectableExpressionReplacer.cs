@@ -37,6 +37,7 @@ namespace EntityFrameworkCore.Projectables.Services
         private readonly static ConditionalWeakTable<Type, PropertyInfo[]> _projectablePropertiesCache = new();
         private readonly static ConditionalWeakTable<Type, MethodInfo> _closedSelectCache = new();
         private readonly static ConditionalWeakTable<Type, MethodInfo> _closedWhereCache = new();
+        private readonly static ConditionalWeakTable<Type, StrongBox<Type?>> _queryableElementTypeCache = new();
 
         public ProjectableExpressionReplacer(IProjectionExpressionResolver projectionExpressionResolver, bool trackByDefault = false)
         {
@@ -330,6 +331,15 @@ namespace EntityFrameworkCore.Projectables.Services
 
         private Expression _AddProjectableSelect(Expression node, IEntityType entityType)
         {
+		    // This appends Select<TEntity, TEntity>, so it only composes when the node
+		    // really is a sequence of TEntity not a DTO or anonymous type.  Fixes this error
+		    //   ArgumentException: Expression of type 'IQueryable<Dto>' cannot be used for
+		    //   parameter of type 'IQueryable<TEntity>' of method Select[TEntity,TEntity]
+            if (!_IsSequenceOfEntity(node.Type, entityType.ClrType))
+            {
+                return node;
+            }
+
             var projectableProperties = _projectablePropertiesCache.GetValue(
                 entityType.ClrType,
                 static t => t.GetProperties()
@@ -371,6 +381,44 @@ namespace EntityFrameworkCore.Projectables.Services
                     xParam
                 )
             );
+        }
+
+        // True when `node` is statically an IQueryable<entityClrType>, which is the only shape
+        // Select<TEntity, TEntity> can be appended to. Deliberately an exact element-type
+        // match rather than an assignability check: IQueryable<out T> is covariant, so
+        // IQueryable<TEntity>.IsAssignableFrom(IQueryable<TDerived>) is true, and rewriting
+        // there would re-project a derived entity as its base type.
+        private static bool _IsSequenceOfEntity(Type nodeType, Type entityClrType)
+            => _queryableElementTypeCache
+                   .GetValue(nodeType, static t => new StrongBox<Type?>(_FindQueryableElementType(t)))
+                   .Value == entityClrType;
+
+        private static Type? _FindQueryableElementType(Type type)
+        {
+            // Fast path: expression nodes built by Queryable.* and EF's query root are
+            // typed as IQueryable<T> exactly.
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IQueryable<>))
+            {
+                return type.GetGenericArguments()[0];
+            }
+
+            // Otherwise the node may be a concrete queryable such as DbSet<T>.
+            Type? elementType = null;
+            foreach (var candidate in type.GetInterfaces())
+            {
+                if (candidate.IsGenericType && candidate.GetGenericTypeDefinition() == typeof(IQueryable<>))
+                {
+                    if (elementType is not null)
+                    {
+                        // Implements IQueryable<> more than once; no single element type.
+                        return null;
+                    }
+
+                    elementType = candidate.GetGenericArguments()[0];
+                }
+            }
+
+            return elementType;
         }
 
         // Builds the member binding used to copy an EF-mapped member into the re-projected entity.
